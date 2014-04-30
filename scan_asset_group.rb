@@ -40,12 +40,12 @@ def get_password(prompt = 'Password: ')
   ask(prompt) { |query| query.echo = false }
 end
 
+puts "logging into #{@host} as #{@user} on port #{@port}"
 @password = get_password
 
-puts "logging into #{@host} as #{@user} on port #{@port}"
 
 nsc = Nexpose::Connection.new(@host, @user, @password, @port)
-
+puts 'Nexpose login initiated'
 nsc.login
 
 puts 'Nexpose login successful'
