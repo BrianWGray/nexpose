@@ -50,7 +50,7 @@ nsc.login
 
 puts 'Nexpose login successful'
 
-puts "Initializing scans for Site ID #{@agid}"
+puts "Initializing scans for Asset Group ID #{@agid}"
 group = AssetGroup.load(nsc, @agid)
 scans = group.rescan_assets(nsc)
 
