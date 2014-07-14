@@ -1,0 +1,6 @@
+# Nexpose-Client Script Configurations
+
+
+hostname: nexpose.example.com
+username: apiuser
+passwordkey: "apiuserpassword"
