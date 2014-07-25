@@ -22,7 +22,7 @@ config = YAML.load_file("conf/nexpose.yaml") # From file
 @port = config["port"]
 
 
-nsc = Nexpose::Connection.new(@host, @userid, @password, @port))
+nsc = Nexpose::Connection.new(@host, @userid, @password, @port)
 puts 'logging into Nexpose'
 
 begin
