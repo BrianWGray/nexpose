@@ -4,3 +4,4 @@
 hostname: nexpose.example.com
 username: apiuser
 passwordkey: "apiuserpassword"
+port: "3780"

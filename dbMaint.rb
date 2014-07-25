@@ -19,6 +19,7 @@ config = YAML.load_file("conf/nexpose.yaml") # From file
 @host = config["hostname"]
 @userid = config["username"]
 @password = config["passwordkey"]
+@port = config["port"]
 
 
 nsc = Nexpose::Connection.new(@host, @userid, @password)

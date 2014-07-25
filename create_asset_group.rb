@@ -18,7 +18,7 @@ OptionParser.new do |opts|
   opts.separator 'Create an asset group based upon an input file, one IP per line.'
   opts.separator ''
   opts.separator 'By default, it uses the name of the file as the name of the asset group.'
-  opts.separator 'As currently written, the script will only asset per IP address.'
+  opts.separator 'As currently written, the script will only add one asset per IP address.'
   opts.separator 'If multiple sites have the same IP, it is non-deterministic which asset it will choose.'
   opts.separator ''
   opts.separator 'Note that this script will always prompt for a connection password.'
