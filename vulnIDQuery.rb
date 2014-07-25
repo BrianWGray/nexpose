@@ -17,8 +17,17 @@ config = YAML.load_file("conf/nexpose.yaml") # From file
 
 nsc = Nexpose::Connection.new(@host, @userid, @password, @port)
 puts 'logging into Nexpose'
-nsc.login
+
+begin
+    nsc.login
+    rescue ::Nexpose::APIError => err
+    $stderr.puts("Connection failed: #{e.reason}")
+    exit(1)
+end
+
 puts 'logged into Nexpose'
+at_exit { nsc.logout }
+
 
 puts "Example: Enter \"http-openssl-cve-2014-0160\" if you want to query for HeartBleed."
 prompt = 'Please enter Vuln-ID to search: '
@@ -124,7 +133,5 @@ end
 
 
 puts 'Report completed and saved to ./nexpose-export.csv.'
-
-nsc.logout
 
 exit
