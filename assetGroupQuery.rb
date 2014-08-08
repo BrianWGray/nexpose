@@ -126,8 +126,7 @@ query = sqlSelect + sqlWhere
 report = Nexpose::AdhocReportConfig.new(nil, 'sql')
 report.add_filter('version', '1.2.1')
 report.add_filter('query', query)
-report.add_filter('group', 1)
-report_output = report.generate(nsc)
+report_output = report.generate(nsc,18000) # Timeout for report generation is currently set at ~30 minutes
 csv_output = CSV.parse(report_output.chomp, { :headers => :first_row })
 CSV.open("AssetGroup_#{UserInput}_export.csv", 'w') do |csv_file|
     csv_file << csv_output.headers
