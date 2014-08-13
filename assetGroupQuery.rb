@@ -6,7 +6,7 @@
 # https://community.rapid7.com/message/11358#11358
 # https://community.rapid7.com/docs/DOC-2612
 #
-# The report query currently in use is not accurate.
+
 
 
 require 'yaml'
