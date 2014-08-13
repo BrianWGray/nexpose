@@ -1,0 +1,10 @@
+# Nexpose-Client Script Configurations
+
+
+hostname: nexpose.example.com
+username: apiuser
+passwordkey: "apiuserpassword"
+port: "3780"
+adhocscantemplate: "full-audit"
+adhocscanengine: 2
+netconfigoutfile: "./conf/netconfig.yaml"
