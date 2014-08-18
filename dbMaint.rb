@@ -44,8 +44,7 @@ begin
     end
 end while active_scans.to_s.empty?
 
-# Base backup code use from https://community.rapid7.com/thread/4687
-# Start the backup
+# Start Database Maintenance Tasks.
 if active_scans.empty?
     platform_independent = true
     puts "Initiating Database Maintenance tasks"
