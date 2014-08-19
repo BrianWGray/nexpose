@@ -39,7 +39,7 @@ begin
         puts "Current scan status: #{active_scans.to_s}"
         sleep(15)
     end
-end while active_scans.to_s.empty?
+end while active_scans.any?
 
 time = Time.new
 backupDescription = time.strftime("%Y%m%d")+"_PI_Weekly"

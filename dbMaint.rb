@@ -42,7 +42,7 @@ begin
         puts "Current scan status: #{active_scans.to_s}"
         sleep(15)
     end
-end while active_scans.to_s.empty?
+end while active_scans.any?
 
 # Start Database Maintenance Tasks.
 if active_scans.empty?
