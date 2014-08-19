@@ -8,3 +8,4 @@ port: "3780"
 adhocscantemplate: "full-audit"
 adhocscanengine: 2
 netconfigoutfile: "./conf/netconfig.yaml"
+servicetimeout: 600
