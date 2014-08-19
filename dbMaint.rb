@@ -7,8 +7,9 @@
 ## 2.) Compress database tables - Compresses the database tables and reclaims unused, allocated space.
 ## 3.) Reindex database - Drops and recreates the database indexes for improved performance.
 
-require 'yaml'
-require 'nexpose'
+require 'yaml'       # Add support for external configurations via yaml file.
+require 'net/http'   # Used to check whether the nexpose service is available.
+require 'nexpose'    # Add nexpose-client gem to interact with Nexpose.
 
 include Nexpose
 
@@ -20,12 +21,57 @@ config = YAML.load_file("conf/nexpose.yaml") # From file
 @userid = config["username"]
 @password = config["passwordkey"]
 @port = config["port"]
+@serviceTimeout = config["servicetimeout"]
+
+
+def checkService()
+    tryAgain = 0
+    
+    begin
+        begin
+            path = '/login.html'  # Check to see if we may login or if we are re-directed to the maintenance login page.
+        
+            http = Net::HTTP.new(@host,@port)
+            http.read_timeout = 1
+            http.use_ssl = true
+            http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+            response = nil
+        
+            http.start{|http|
+                request = Net::HTTP::Get.new(path)
+                response = http.request(request)
+            }
+        
+        rescue Exception   # should really list all the possible http exceptions
+                puts "Attempt: #{tryAgain} Service Unavailable"
+                sleep (30)
+                retry if (tryAgain += 1) < @serviceTimeout
+        end
+        
+        response.code
+        if response.code == "200" # Check the status code anything other than 200 indicates the service is not ready.
+            puts "Attempt: #{tryAgain} #{response.code} The Nexpose Service appears to be up and functional"
+            tryAgain = @serviceTimeout
+        else
+            puts "Attempt: #{tryAgain} #{response.code} #{response.message} The Service is not yet fully initialized"
+            tryAgain += 1
+            sleep(30)
+        end
+    end while tryAgain < @serviceTimeout
+    
+    if (response.code != "200")
+        puts "The service was never determined to be available. Action Timed Out"
+        exit
+    end
+end
 
 
 nsc = Nexpose::Connection.new(@host, @userid, @password, @port)
-puts 'logging into Nexpose'
+
 
 begin
+    checkService()
+    puts 'logging into Nexpose'
     nsc.login
     rescue ::Nexpose::APIError => err
     $stderr.puts("Connection failed: #{e.reason}")
@@ -44,7 +90,7 @@ begin
     end
 end while active_scans.any?
 
-# Start Database Maintenance Tasks.
+# Start database maintenance
 if active_scans.empty?
     platform_independent = true
     puts "Initiating Database Maintenance tasks"
