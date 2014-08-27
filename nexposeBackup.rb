@@ -2,7 +2,7 @@
 # Brian W. Gray
 # 07.14.2014
 
-## Script generates a Platform Independant application backup.
+## Script generates a Platform Independent application backup.
 
 require 'yaml'
 require 'nexpose'
