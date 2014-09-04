@@ -5,7 +5,7 @@
 ## Script performs the following tasks
 ## 1.) Read addresses from text file
 ## 2.) De-duplicate addresses
-## 3.) Create new temporarory site
+## 3.) Create new temporary site
 ## 4.) Add addresses to the created site
 ## 5.) Specify scan engine and template to use from nexpose.yaml
 ## 6.) Perform scan of the temporary site.

@@ -5,7 +5,7 @@
 ## Script runs the following database maintenance tasks
 ## 1.) Clean up database - Removes any unnecessary data from the database
 ## 2.) Compress database tables - Compresses the database tables and reclaims unused, allocated space.
-## 3.) Reindex database - Drops and recreates the database indexes for improved performance.
+## 3.) Re-index database - Drops and recreates the database indexes for improved performance.
 
 require 'yaml'       # Add support for external configurations via yaml file.
 require 'net/http'   # Used to check whether the nexpose service is available.
