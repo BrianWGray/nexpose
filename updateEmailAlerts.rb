@@ -1,6 +1,10 @@
 #!/usr/bin/env ruby
 # Brian W. Gray
 # Original creation date 07.25.2014
+# 
+# The bulk of email modification code is adopted from gschneider https://gist.github.com/gschneider-r7/cccbef2293c007122f58
+#
+
 
 ## Script performs the following
 ## 1.) Parses all sites for SMTP alerts
