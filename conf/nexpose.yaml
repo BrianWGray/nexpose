@@ -9,3 +9,5 @@ adhocscantemplate: "full-audit"
 adhocscanengine: 2
 netconfigoutfile: "./conf/netconfig.yaml"
 servicetimeout: 600
+cleanupqueue: 5
+cleanupwaittime: 60
