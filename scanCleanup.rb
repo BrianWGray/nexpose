@@ -22,6 +22,7 @@ config = YAML.load_file("conf/nexpose.yaml") # From file
 @port = config["port"]
 @consecutiveCleanupScans = config["cleanupqueue"]
 @cleanupWaitTime = config["cleanupwaittime"]
+@nexposeAjaxTimeout = config["nexposeajaxtimeout"]
 
 fillQueue = 0
 
@@ -39,9 +40,39 @@ end
 puts 'logged into Nexpose'
 at_exit { nsc.logout }
 
+
+## Initialize connection timeout values.
+## Timeout example provided by JGreen in https://community.rapid7.com/thread/5075
+
+module Nexpose
+    class APIRequest
+        include XMLUtils
+        # Execute an API request
+        def self.execute(url, req, api_version='2.0', options = {})
+        options = {timeout: @nexposeAjaxTimeout}
+        obj = self.new(req.to_s, url, api_version)
+        obj.execute(options)
+        return obj
+    end
+end
+
+
+module AJAX
+    def self._https(nsc)
+        http = Net::HTTP.new(nsc.host, nsc.port)
+        http.use_ssl = true
+        http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+        http.read_timeout = @nexposeAjaxTimeout
+        http
+    end
+end
+end
+
+
 ## Start loop that will continue until there are not longer any scans paused or actively running.
 begin
     
+    puts "\r\nRequesting scan status updates from #{@host}\r\n"
     ## Pull data for paused scans - Method suggested by JGreen https://community.rapid7.com/thread/5075 (THANKS!!!)
     pausedScans = DataTable._get_dyn_table(nsc, '/ajax/scans_history.txml').select { |scanHistory| (scanHistory['Status'].include? 'Paused')}
     ## Pull data for active scans
@@ -90,10 +121,12 @@ begin
             
         end
     
-    ## Wait between checks so that the scans have time to run.
-    sleep(@cleanupWaitTime)
+    if ((pausedScans.count + activeScans.count) > 0)
+        ## Wait between checks so that the scans have time to run.
+        sleep(@cleanupWaitTime)
+    end
     
-## If there are no more paused scans and the active scans have all completed without failing we can exit. 
+## If there are no more paused scans and the active scans have all completed without failing we can exit.
 end while ((pausedScans.count + activeScans.count) > 0)
 
 puts 'Logging out'
