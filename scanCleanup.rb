@@ -69,7 +69,7 @@ end
 end
 
 
-## Start loop that will continue until there are not longer any scans paused or actively running.
+## Start loop that will continue until there are no longer any scans paused or actively running.
 begin
     
     puts "\r\nRequesting scan status updates from #{@host}\r\n"
