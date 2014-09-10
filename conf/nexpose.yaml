@@ -11,3 +11,4 @@ netconfigoutfile: "./conf/netconfig.yaml"
 servicetimeout: 600
 cleanupqueue: 5
 cleanupwaittime: 60
+nexposeajaxtimeout: 1200000000
