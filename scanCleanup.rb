@@ -71,13 +71,20 @@ end
 
 ## Start loop that will continue until there are no longer any scans paused or actively running.
 begin
+    begin
+            puts "\r\nRequesting scan status updates from #{@host}\r\n"
+            ## Pull data for paused scans - Method suggested by JGreen https://community.rapid7.com/thread/5075 (THANKS!!!)
+            pausedScans = DataTable._get_dyn_table(nsc, '/ajax/scans_history.txml').select { |scanHistory| (scanHistory['Status'].include? 'Paused')}
+            ## Pull data for active scans
+            activeScans = nsc.scan_activity()
     
-    puts "\r\nRequesting scan status updates from #{@host}\r\n"
-    ## Pull data for paused scans - Method suggested by JGreen https://community.rapid7.com/thread/5075 (THANKS!!!)
-    pausedScans = DataTable._get_dyn_table(nsc, '/ajax/scans_history.txml').select { |scanHistory| (scanHistory['Status'].include? 'Paused')}
-    ## Pull data for active scans
-    activeScans = nsc.scan_activity()
-    
+        rescue Exception   # should really list all the possible http exceptions
+            puts "Connection issue detected - Retrying in 30 seconds"
+            sleep (30)
+        retry
+    end
+
+
     puts "\r\n -- Queue Size: #{@consecutiveCleanupScans} -- \r\n"
     
     
