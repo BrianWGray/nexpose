@@ -113,7 +113,11 @@ begin
     puts "\r\n-- Paused Scans Detected : #{pausedScans.count}  --\r\n"
     pausedScans.each do |scanHistory|
         siteInfoID = scanHistory['Site ID'].to_i
-        puts "ScanID: #{scanHistory['Scan ID']}, Assets: #{scanHistory['Devices Discovered']}, SiteID: #{siteInfoID} - #{siteInfo[siteInfoID].name}, #{scanHistory['Status']}"
+        begin
+            puts "ScanID: #{scanHistory['Scan ID']}, Assets: #{scanHistory['Devices Discovered']}, SiteID: #{siteInfoID} - #{siteInfo[siteInfoID].name}, #{scanHistory['Status']}"
+            rescue
+                puts "ScanID: #{scanHistory['Scan ID']}, Assets: #{scanHistory['Devices Discovered']}, SiteID: #{siteInfoID}, #{scanHistory['Status']}"
+        end
     end
     puts "-- Paused Scans Detected : #{pausedScans.count}  --\r\n"
 
@@ -123,7 +127,11 @@ begin
     ## Output a list of active scans in the scan queue.
     activeScans.each do |status|
         siteInfoID = status.site_id
-        puts "ScanID: #{status.scan_id}, Assets: #{status.nodes.live}, SiteID: #{status.site_id} - #{siteInfo[siteInfoID].name}, Status:#{status.status}, EngineID:#{status.engine_id}, StartTime:#{status.start_time}"
+        begin
+            puts "ScanID: #{status.scan_id}, Assets: #{status.nodes.live}, SiteID: #{status.site_id} - #{siteInfo[siteInfoID].name}, Status:#{status.status}, EngineID:#{status.engine_id}, StartTime:#{status.start_time}"
+            rescue
+            puts "ScanID: #{status.scan_id}, Assets: #{status.nodes.live}, SiteID: #{status.site_id}, Status:#{status.status}, EngineID:#{status.engine_id}, StartTime:#{status.start_time}"
+        end
     end
     
     ## Check to see if there are any slots open in the cleanup queue and that there are still scans to resume.
@@ -134,7 +142,11 @@ begin
        ## Loop through just enough paused scans to fill the open slots in the cleanup queue.
        pausedScans[0..fillQueue.to_i].each do |scanHistory|
            siteInfoID = scanHistory['Site ID'].to_i
-           puts "Resuming ScanID: #{scanHistory['Scan ID']}, Assets: #{scanHistory['Devices Discovered']}, SiteID: #{siteInfoID} - #{siteInfo[siteInfoID].name}, Status: #{scanHistory['Status']}"
+           begin
+            puts "Resuming ScanID: #{scanHistory['Scan ID']}, Assets: #{scanHistory['Devices Discovered']}, SiteID: #{siteInfoID} - #{siteInfo[siteInfoID].name}, Status: #{scanHistory['Status']}"
+            rescue
+            puts "Resuming ScanID: #{scanHistory['Scan ID']}, Assets: #{scanHistory['Devices Discovered']}, SiteID: #{siteInfoID}, Status: #{scanHistory['Status']}"
+           end
            ## Resume the provided scanid.
            nsc.resume_scan(scanHistory['Scan ID'])
        end
