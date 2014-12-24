@@ -85,19 +85,17 @@ begin
             engine_name = engine_list[site.engine]
             if sched = site.schedules.first
                 schedule = "#{sched.type}:#{sched.interval}"
-                start_time = Time.parse(sched.start)
                 if sched.max_duration
                     # If we find a max time defined we use it as the end_time to specify the available scan window
                     # this replaces the guess created from the last scan duration.
                     maxDuration = sched.max_duration
-                    end_time = start_time + maxDuration*60
                     else
                     maxDuration = 0
                 end
             end
             
             if latest.end_time
-                duration_sec = latest.end_time - start_time
+                duration_sec = latest.end_time - latest_start_time
                 hours = (duration_sec / 3600).to_i
                 minutes = (duration_sec / 60 - hours * 60).to_i
                 seconds = (duration_sec - (minutes * 60 + hours * 3600))
@@ -107,6 +105,10 @@ begin
             end
             
             if defined? sched.enabled # Check to see if the site has a schedule enabled.
+                
+                
+                start_time = Time.parse(sched.start)
+                end_time = start_time + maxDuration*60
                 
                 puts "Site:#{site.name} starts #{start_time} Max scan time: #{maxDuration} #{end_time} using #{template} from #{engine_name} on a #{sched.type.upcase} schedule Interval: #{sched.interval}"
                 
@@ -153,7 +155,7 @@ begin
 
     output = File.new(output_fn, 'w')
     output.write(cal.to_ical)
-    puts "iCalendard file #{output_fn} saved"
+    puts "iCalendar file #{output_fn} saved"
     
 end
 
