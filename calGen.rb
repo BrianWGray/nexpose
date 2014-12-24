@@ -132,11 +132,11 @@ begin
                     event.rrule = ["FREQ=WEEKLY;INTERVAL=#{sched.interval.to_i};COUNT=numIterations"]
                 end
                 
-                if sched.type == "monthly_date"
+                if sched.type == "monthly-date"
                     event.rrule = ["FREQ=MONTHLY;INTERVAL=#{sched.interval.to_i};COUNT=numIterations"]
                 end
                 
-                if sched.type == "monthly_day"
+                if sched.type == "monthly-day"
                     # I need to take more time to hash out the best way to implement this. Should be fairly straight forward?
                     # event.rrule = ["FREQ=MONTHLY;BYMONTHDAY=#{sched.interval.to_i};COUNT=numIterations"]
                 end
