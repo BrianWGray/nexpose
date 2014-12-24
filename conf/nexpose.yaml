@@ -12,3 +12,5 @@ servicetimeout: 600
 cleanupqueue: 5
 cleanupwaittime: 60
 nexposeajaxtimeout: 1200000000
+icsfilename: "NexposeScanSchedule.ics"
+icsitterations: 4
