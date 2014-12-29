@@ -124,19 +124,14 @@ begin
                 # http://www.ietf.org/rfc/rfc2445.txt
                 # There is still a good bit of work that needs to be done here.
                 
-                if sched.type == "daily"
+                case
+                when sched.type == "daily"
                     event.rrule = ["FREQ=DAILY;INTERVAL=#{sched.interval.to_i};COUNT=numIterations*7"] # Iterations are assumed to be in weeks here.
-                end
-                
-                if sched.type == "weekly"
+                when sched.type == "weekly"
                     event.rrule = ["FREQ=WEEKLY;INTERVAL=#{sched.interval.to_i};COUNT=numIterations"]
-                end
-                
-                if sched.type == "monthly-date"
+                when sched.type == "monthly-date"
                     event.rrule = ["FREQ=MONTHLY;INTERVAL=#{sched.interval.to_i};COUNT=numIterations"]
-                end
-                
-                if sched.type == "monthly-day"
+                when sched.type == "monthly-day"
                     # I need to take more time to hash out the best way to implement this. Should be fairly straight forward?
                     # event.rrule = ["FREQ=MONTHLY;BYMONTHDAY=#{sched.interval.to_i};COUNT=numIterations"]
                 end
