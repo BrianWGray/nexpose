@@ -15,8 +15,9 @@ include Nexpose
 
 engineID = 6 # engine id to stop
 
-# Default Values
-config = YAML.load_file("conf/nexpose.yaml") # From file
+# Default Values from yaml file
+config_path = File.expand_path("../conf/nexpose.yaml", __FILE__)
+config = YAML.load_file(config_path)
 
 @host = config["hostname"]
 @userid = config["username"]
