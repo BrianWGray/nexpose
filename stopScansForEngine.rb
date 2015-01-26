@@ -39,7 +39,7 @@ activeScans = nsc.scan_activity()
 # Collect Site info to provide additional information for screen output.
 siteInfo = nsc.sites
 
-## Iterate through active scans and stop scans matching the specified scan id.
+## Iterate through active scans and stop scans matching the specified engine id.
 activeScans.each do |status|
     siteInfoID = status.site_id
     begin
