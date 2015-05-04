@@ -10,8 +10,6 @@
 # require gems
 require 'yaml'
 require 'nexpose'
-require 'pp'
-
 
 # Default Values from yaml file
 config_path = File.expand_path("../conf/nexpose.yaml", __FILE__)
@@ -23,12 +21,11 @@ config = YAML.load_file(config_path)
 @password = config["passwordkey"]
 @port = config["port"]
 
+# Configure Options for alert template
 
+## Set logserver / port to use in alerts
 logServer = config["logserver"]
 logPort = config["logport"]
-
-
-# Configure Options for alert template
 
 ## Scan alert filters
 alertFail   = config["alertFail"]
@@ -63,10 +60,10 @@ puts "Syslog alerts will be added to every site located on this console."
 
 begin
   # Step through each site in the site listing.
-  # sites.each do |site|
+  sites.each do |site|
     begin
       # Load the site configuration to make changes
-      site = Nexpose::Site.load(nsc, 147)  # site.id - Statically set to 147 for testing, normally dynamic.
+      site = Nexpose::Site.load(nsc, site.id)
       puts "Evaluating site #{site.name} (id: #{site.id})."
 
         
@@ -128,7 +125,7 @@ begin
     rescue Exception => err
       puts err.message
     end
-    #end
+    end
 
 # Global error, this usually exits the loop and terminates.
 rescue Exception => err
