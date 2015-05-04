@@ -60,10 +60,10 @@ puts "Syslog alerts will be added to every site located on this console."
 
 begin
   # Step through each site in the site listing.
-  sites.each do |site|
+  sites.each do |eachSite|
     begin
       # Load the site configuration to make changes
-      site = Nexpose::Site.load(nsc, site.id)
+      site = Nexpose::Site.load(nsc, eachSite.id)
       puts "Evaluating site #{site.name} (id: #{site.id})."
 
         
