@@ -6,7 +6,16 @@ username: apiuser
 passwordkey: "apiuserpassword"
 port: "3780"
 logserver: "localhost"
-logport : 514
+logport: 514
+alertFail: 1
+alertPause: 1
+alertResume: 1
+alertStart: 1
+alertStop: 1
+alertConfirmed: 1
+alertPotential: 1
+alertSeverity: 1
+alertUnconfirmed: 1
 adhocscantemplate: "full-audit"
 adhocscanengine: 2
 netconfigoutfile: "./conf/netconfig.yaml"
