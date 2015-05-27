@@ -93,8 +93,11 @@ begin
                     end
                 end
             end
+        rescue Exception => err
+            puts err.message
         end
         
+        begin
         # Initialize a syslog alert for the site.
         syslogAlert = Nexpose::SyslogAlert.new("#{alertPrefix}#{site.id}", nsc, 1, -1)
         puts "Initiated adding #{logServer} to alert for site #{site.name} (id: #{site.id})."
@@ -150,8 +153,10 @@ begin
         puts "Changes saved to site #{site.name} (id:#{site.id})."
         
         # Site level error, continue to the next site.
-
+    rescue Exception => err
+        puts err.message
     end
+end
     
     # Global error, this usually exits the loop and terminates.
 rescue Exception => err
