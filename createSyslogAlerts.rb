@@ -4,8 +4,8 @@
 
 ## Script performs the following
 ## 1.) Parses all sites and adds a syslog alert
-## 2.) Assumes there are no existing alerts - TODO: account for this and update alerts that follow the automated naming convention for this script.
-## 3.)
+## 2.) Looks for existing alerts in each site with the same name as the new alert and removes them prior to adding the new alert.
+
 
 # require gems
 require 'yaml'
