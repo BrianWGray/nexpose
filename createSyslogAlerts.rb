@@ -150,8 +150,7 @@ begin
         puts "Changes saved to site #{site.name} (id:#{site.id})."
         
         # Site level error, continue to the next site.
-    rescue Exception => err
-        puts err.message
+
     end
     
     # Global error, this usually exits the loop and terminates.
