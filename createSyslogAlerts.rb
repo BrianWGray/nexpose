@@ -82,7 +82,7 @@ begin
                         # Create a new object from the alerts to make changes
                         if alert.alert_type.include?("Syslog")
                             if alert.name.include?("#{alertPrefix}#{site.id}")
-                                alert.delete(nsc,site.id)
+                                site.alerts.delete_if{ |obj| obj.name.include?("#{alertPrefix}#{site.id}")}
                                 puts "Deleted #{alertPrefix}#{site.id} from alerts for site #{site.name} (id: #{site.id})."
                                 
                                 # Save the site configuration
@@ -93,70 +93,70 @@ begin
                     end
                 end
             end
-            
-            # Initialize a syslog alert for the site.
-            syslogAlert = Nexpose::SyslogAlert.new("#{alertPrefix}#{site.id}", nsc, 1, -1)
-            puts "Initiated adding #{logServer} to alert for site #{site.name} (id: #{site.id})."
-            
-            # Set the syslog server to use.
-            puts "      Setting #{logServer} as the log receiver"
-            syslogAlert.server = logServer # Defined in ./conf/nexpose.yaml
-            
-            # Set the syslog port to use
-            puts "      Setting logging port #{logPort} for the log receiver"
-            syslogAlert.server_port = logPort # Defined in ./conf/nexpose.yaml
-            
-            puts "      Setting the scan filters"
-            alertScanFilter = Nexpose::ScanFilter.new # setup scan filter?
-            
-            ## Scan alert filters
-            alertScanFilter.fail = alertFail
-            puts "          Fail = #{alertFail}"
-            alertScanFilter.pause = alertPause
-            puts "          Pause = #{alertPause}"
-            alertScanFilter.resume = alertResume
-            puts "          Resume = #{alertResume}"
-            alertScanFilter.start = alertStart
-            puts "          Start = #{alertStart}"
-            alertScanFilter.stop = alertStop
-            puts "          Stop = #{alertStop}"
-            
-            # Assign filters to scan_filter
-            syslogAlert.scan_filter = alertScanFilter
-            
-            puts "      Setting the vuln filter"
-            alertVulnFilter = Nexpose::VulnFilter.new # setup vuln filter?
-            
-            ## Vuln alert filters
-            alertVulnFilter.confirmed = alertConfirmed
-            puts "          Confirmed = #{alertConfirmed}"
-            alertVulnFilter.potential = alertPotential
-            puts "          Potential = #{alertPotential}"
-            alertVulnFilter.severity = alertSeverity
-            puts "          Severity = #{alertSeverity}"
-            alertVulnFilter.unconfirmed = alertUnconfirmed
-            puts "          Unconfirmed = #{alertUnconfirmed}"
-            
-            # Assign filters to vuln_filter
-            syslogAlert.vuln_filter = alertVulnFilter
-            
-            # Apply alert to site.
-            site.alerts << syslogAlert
-            
-            # Save the site configuration
-            puts "      Saving the alert"
-            site.save(nsc)
-            puts "Changes saved to site #{site.name} (id:#{site.id})."
-            
-            # Site level error, continue to the next site.
-            #rescue Exception => err
-            #puts err.message
         end
+        
+        # Initialize a syslog alert for the site.
+        syslogAlert = Nexpose::SyslogAlert.new("#{alertPrefix}#{site.id}", nsc, 1, -1)
+        puts "Initiated adding #{logServer} to alert for site #{site.name} (id: #{site.id})."
+        
+        # Set the syslog server to use.
+        puts "      Setting #{logServer} as the log receiver"
+        syslogAlert.server = logServer # Defined in ./conf/nexpose.yaml
+        
+        # Set the syslog port to use
+        puts "      Setting logging port #{logPort} for the log receiver"
+        syslogAlert.server_port = logPort # Defined in ./conf/nexpose.yaml
+        
+        puts "      Setting the scan filters"
+        alertScanFilter = Nexpose::ScanFilter.new # setup scan filter?
+        
+        ## Scan alert filters
+        alertScanFilter.fail = alertFail
+        puts "          Fail = #{alertFail}"
+        alertScanFilter.pause = alertPause
+        puts "          Pause = #{alertPause}"
+        alertScanFilter.resume = alertResume
+        puts "          Resume = #{alertResume}"
+        alertScanFilter.start = alertStart
+        puts "          Start = #{alertStart}"
+        alertScanFilter.stop = alertStop
+        puts "          Stop = #{alertStop}"
+        
+        # Assign filters to scan_filter
+        syslogAlert.scan_filter = alertScanFilter
+        
+        puts "      Setting the vuln filter"
+        alertVulnFilter = Nexpose::VulnFilter.new # setup vuln filter?
+        
+        ## Vuln alert filters
+        alertVulnFilter.confirmed = alertConfirmed
+        puts "          Confirmed = #{alertConfirmed}"
+        alertVulnFilter.potential = alertPotential
+        puts "          Potential = #{alertPotential}"
+        alertVulnFilter.severity = alertSeverity
+        puts "          Severity = #{alertSeverity}"
+        alertVulnFilter.unconfirmed = alertUnconfirmed
+        puts "          Unconfirmed = #{alertUnconfirmed}"
+        
+        # Assign filters to vuln_filter
+        syslogAlert.vuln_filter = alertVulnFilter
+        
+        # Apply alert to site.
+        site.alerts << syslogAlert
+        
+        # Save the site configuration
+        puts "      Saving the alert"
+        site.save(nsc)
+        puts "Changes saved to site #{site.name} (id:#{site.id})."
+        
+        # Site level error, continue to the next site.
+    rescue Exception => err
+        puts err.message
     end
     
     # Global error, this usually exits the loop and terminates.
-#rescue Exception => err
-#    puts err.message
+rescue Exception => err
+    puts err.message
 end
 
 puts "Updates completed."
