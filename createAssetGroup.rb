@@ -3,6 +3,8 @@
 # Date Created: 04.30.2014
 # Written by: BrianWGray
 
+# Original script sourced from [mdaines-r7] https://github.com/rapid7/nexpose-client/blob/master/scripts/create_asset_group.rb
+
 ## Script performs the following tasks
 ## 1.) Read addresses from text file
 ## 2.) De-duplicate addresses
