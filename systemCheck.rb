@@ -103,9 +103,6 @@ end
 
 at_exit { nsc.logout }
 
-pp nsc
-
-
 #Pull system info
 sysInfo = nsc.system_information
 
@@ -182,7 +179,7 @@ puts "Console Uptime: #{nscUpTime}"
 
 #Check memory utilization
 puts "Console Free Memory: #{nscFreeMem}"
-puts "Console Total Memeory: #{nscTotalMem}"
+puts "Console Total Memory: #{nscTotalMem}"
 
 #Check CPU information
 puts "Number of Console CPUs: #{nscCpuCount}"
@@ -242,7 +239,19 @@ puts "---- List of Available Scan Engines ----"
 puts #Blank line
 
 # Pull scan engine status / ensure engine status is current.
-versionEngines = nsc.console_command('version engines')
+## versionEngines = nsc.console_command('version engines')
+
+## I don't use a rapid7 hosted scan engine so I've excluded it due to timeouts etc. attempting to refresh it.
+
+engine_ids = Array.new
+nsc.engines.each do |engine|
+    unless engine.name.include?("Rapid7 Hosted Scan Engine")
+        engine_ids << engine.id
+    end
+end
+
+Nexpose::AJAX.post(nsc, "/ajax/engine-refreshAll.txml", "engineIds=#{engine_ids * ','}", Nexpose::AJAX::CONTENT_TYPE::FORM)
+
 engine_list = {}
 nsc.engines.each do |engine|
     engine_list[engine.id] = "#{engine.name} (#{engine.status})"
@@ -254,7 +263,7 @@ nsc.engines.each do |engine|
     puts "  Status: #{engine.status}"
     puts #Blank line
     
-    puts versionEngines
+    # puts versionEngines
 end
 
 
