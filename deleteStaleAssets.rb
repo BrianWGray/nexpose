@@ -10,7 +10,6 @@
 
 require 'yaml'
 require 'nexpose'
-require 'pp'
 
 include Nexpose
 
