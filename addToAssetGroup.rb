@@ -37,7 +37,7 @@ OptionParser.new do |opts|
   opts.separator 'If multiple sites include the same address, it is non-deterministic which asset it will choose.'
   opts.separator ''
   opts.separator 'Options:'
-  opts.on('-i', '--groupid [groupid]', 'Name to use for new asset group. Must not already exist.') { |groupid| @groupid = groupid }
+  opts.on('-i', '--groupid [groupid]', 'Name to use for new asset group. Must already exist.') { |groupid| @groupid = groupid }
   opts.on('-x', '--debug', 'Report duplicate IP addresses to STDERR.') { |debug| @debug = debug }
   opts.on_tail('--help', 'Print this help message.') { puts opts; exit }
 end.parse!
