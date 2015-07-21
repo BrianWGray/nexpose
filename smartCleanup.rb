@@ -130,6 +130,8 @@ begin
     
     puts "\r\n -- Queue Size: #{@consecutiveCleanupScans}. -- \r\n"
     
+    hostCount = 0 # Initialize hostCount.
+    
     ## Output a list of active scans in the scan queue.
     activeScans.each do |status|
         siteInfoID = status.site_id
@@ -137,19 +139,19 @@ begin
         begin
             Scan
             puts "ScanID: #{status.scan_id}, Assets: #{status.nodes.live}, ScanTemplate: #{siteDetail.scan_template_id}, SiteID: #{status.site_id} - #{siteDetail.name}, Status:#{status.status}, EngineID:#{status.engine_id}, StartTime:#{status.start_time}"
+            hostCount += status.nodes.live
             rescue
             raise
         end
         
     end
     
-    hostCount = 0 # Initialize hostCount.
     
     ## Check to see if there are any slots open in the cleanup queue and that there are still scans to resume.
     if ((activeScans.count < @consecutiveCleanupScans) and (pausedScans.count > 0))
         
         ## Determine how many slots are left in the cleanup queue to use.
-        fillQueue = ((@consecutiveCleanupScans - activeScans.count))
+        fillQueue = ((@consecutiveCleanupScans - activeScans.count) -1)
         
         ## Loop through just enough paused scans to fill the open slots in the cleanup queue.
         pausedScans[0..fillQueue.to_i].each do |scanHistory|
