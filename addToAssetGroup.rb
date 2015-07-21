@@ -4,6 +4,7 @@
 # Written by: BrianWGray
 
 # Borrows heavily from https://github.com/rapid7/nexpose-client/blob/master/scripts/create_asset_group.rb
+# Generated for https://community.rapid7.com/thread/7584
 
 ## Script performs the following tasks
 ## 1.) Read addresses from text file
