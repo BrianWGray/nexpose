@@ -122,7 +122,6 @@ begin
         begin
             puts "ScanID: #{scanHistory['Scan ID']}, Assets: #{scanHistory['Devices Discovered']}, ScanTemplate: #{siteDetail.scan_template_id}, SiteID: #{siteInfoID} - #{siteDetail.name}, #{scanHistory['Status']}"
             rescue
-            puts "ScanID: #{scanHistory['Scan ID']}, Assets: #{scanHistory['Devices Discovered']}, ScanTemplate: #{siteDetail.scan_template_id}, SiteID: #{siteInfoID}, #{siteDetail.name}, #{scanHistory['Status']}"
             raise
         end
     end
@@ -139,7 +138,6 @@ begin
             Scan
             puts "ScanID: #{status.scan_id}, Assets: #{status.nodes.live}, ScanTemplate: #{siteDetail.scan_template_id}, SiteID: #{status.site_id} - #{siteDetail.name}, Status:#{status.status}, EngineID:#{status.engine_id}, StartTime:#{status.start_time}"
             rescue
-            puts "ScanID: #{status.scan_id}, Assets: #{status.nodes.live}, ScanTemplate: #{siteDetail.scan_template_id}, SiteID: #{status.site_id} - #{siteDetail.name}, Status:#{status.status}, EngineID:#{status.engine_id}, StartTime:#{status.start_time}"
             raise
         end
         
@@ -151,7 +149,7 @@ begin
     if ((activeScans.count <= @consecutiveCleanupScans) and (pausedScans.count > 0))
         
         ## Determine how many slots are left in the cleanup queue to use.
-        fillQueue = ((@consecutiveCleanupScans - activeScans.count))
+        fillQueue = ((@consecutiveCleanupScans - activeScans.count) - 1)
         
         ## Loop through just enough paused scans to fill the open slots in the cleanup queue.
         pausedScans[0..fillQueue.to_i].each do |scanHistory|
@@ -161,7 +159,6 @@ begin
                 hostCount += scanHistory['Devices Discovered'].to_i # Count the number of hosts being scanned.
                 puts "Resuming ScanID: #{scanHistory['Scan ID']}, Assets: #{scanHistory['Devices Discovered']}, ScanTemplate: #{siteDetail.scan_template_id}, SiteID: #{siteInfoID} - #{siteDetail.name}, Status: #{scanHistory['Status']}"
                 rescue
-                puts "Resuming ScanID: #{scanHistory['Scan ID']}, Assets: #{scanHistory['Devices Discovered']}, ScanTemplate: #{siteDetail.scan_template_id}, SiteID: #{siteInfoID}, Status: #{siteDetail.name}"
                 raise
             end
             ## Resume the provided scanid.
