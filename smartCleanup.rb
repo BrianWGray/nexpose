@@ -146,10 +146,10 @@ begin
     hostCount = 0 # Initialize hostCount.
     
     ## Check to see if there are any slots open in the cleanup queue and that there are still scans to resume.
-    if ((activeScans.count <= @consecutiveCleanupScans) and (pausedScans.count > 0))
+    if ((activeScans.count < @consecutiveCleanupScans) and (pausedScans.count > 0))
         
         ## Determine how many slots are left in the cleanup queue to use.
-        fillQueue = ((@consecutiveCleanupScans - activeScans.count) - 1)
+        fillQueue = ((@consecutiveCleanupScans - activeScans.count))
         
         ## Loop through just enough paused scans to fill the open slots in the cleanup queue.
         pausedScans[0..fillQueue.to_i].each do |scanHistory|
