@@ -29,7 +29,7 @@ config = YAML.load_file(config_path)
 @groupid = nil
 
 OptionParser.new do |opts|
-  opts.banner = "Usage: #{File::basename($0)} [options]"
+  opts.banner = "Usage: #{File::basename($0)} addresses.txt [options]"
   opts.separator ''
   opts.separator 'Add assets to an existing asset group based upon an input file, one IP per line.'
   opts.separator ''
