@@ -60,7 +60,7 @@ begin
 	site.each do |site|
 		site = Nexpose::Site.load(nsc, site.id)
 		puts "Getting defined assets for #{site.name}"
-		site.assets.each do |asset|
+		site.included_addresses.each do |asset|
 			if asset.respond_to? :from
                 
                 if asset.to != nil
