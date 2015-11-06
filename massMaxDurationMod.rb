@@ -81,7 +81,7 @@ begin
     begin
         puts "Requesting scan status updates from #{@host}\r\n"
         ## Pull data for paused scans - Method suggested by JGreen https://community.rapid7.com/thread/5075 (THANKS!!!)
-        pausedScans = DataTable._get_dyn_table(nsc, '/ajax/scans_history.txml').select { |scanHistory| (scanHistory['Status'].include? 'Paused')}
+        pausedScans = DataTable._get_dyn_table(nsc, '/data/site/scans/dyntable.xml?printDocType=0&tableID=siteScansTable&activeOnly=true').select { |scanHistory| (scanHistory['Status'].include? 'Paused')}
         
         # Check scan activity wait until there are no scans running or paused
         activeScans = nsc.scan_activity()
