@@ -5,15 +5,16 @@
 ## Script performs the following tasks
 ## 1.) Retrieve a list of paused scans from a console.
 ## 2.) Iteratively stop scans that have paused without completing.
-## 4.) TODO: Massive code cleanup + efficiency improvements.
+## 3.) TODO: Massive code cleanup + efficiency improvements.
 
 require 'yaml'
 require 'nexpose'
 
 include Nexpose
 
-# Default Values
-config = YAML.load_file("conf/nexpose.yaml") # From file
+# Default Values from yaml file
+config_path = File.expand_path("../conf/nexpose.yaml", __FILE__)
+config = YAML.load_file(config_path)
 
 @host = config["hostname"]
 @userid = config["username"]
@@ -70,7 +71,7 @@ begin
     begin
             puts "\r\nRequesting scan status updates from #{@host}\r\n"
             ## Pull data for paused scans - Method suggested by JGreen https://community.rapid7.com/thread/5075 (THANKS!!!)
-            pausedScans = DataTable._get_dyn_table(nsc, '/ajax/scans_history.txml').select { |scanHistory| (scanHistory['Status'].include? 'Paused')}
+            pausedScans = DataTable._get_dyn_table(nsc, '/data/site/scans/dyntable.xml?printDocType=0&tableID=siteScansTable&activeOnly=true').select { |scanHistory| (scanHistory['Status'].include? 'Paused')}
         rescue Exception   # should really list all the possible http exceptions
             puts "Connection issue detected - Retrying in 30 seconds"
             sleep (120)
