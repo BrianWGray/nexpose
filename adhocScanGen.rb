@@ -2,6 +2,8 @@
 # Brian W. Gray
 # 07.25.2014
 
+## Script Heavily borrows from Steve Tempest : https://community.rapid7.com/docs/DOC-2733
+
 ## Script performs the following tasks
 ## 1.) Read addresses from text file
 ## 2.) De-duplicate addresses
