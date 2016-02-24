@@ -19,10 +19,12 @@
 #   - Fixed yaml relative path issues with running the script from outside of its directory.
 #   - Some code clean up.
 
+## Update - 02.23.2016 - BWG
+# Changed how paused scans are pulled basd on https://community.rapid7.com/thread/7904 
+
 
 require 'yaml'
 require 'nexpose'
-
 include Nexpose
 
 # Default Values from yaml file
@@ -89,8 +91,8 @@ begin
     
     begin
         puts "\r\nRequesting scan status updates from #{@host}\r\n"
-        ## Pull data for paused scans - Method suggested by JGreen https://community.rapid7.com/thread/5075 (THANKS!!!)
-        pausedScans = DataTable._get_dyn_table(nsc, '/data/site/scans/dyntable.xml?printDocType=0&tableID=siteScansTable&activeOnly=true').select { |scanHistory| (scanHistory['Status'].include? 'Paused')}
+        ## Pull data for paused scans
+        pausedScans = nsc.paused_scans
         ## Pull data for active scans
         activeScans = nsc.scan_activity()
         
@@ -117,10 +119,14 @@ begin
     ## List all of the paused scans to stdout.
     puts "\r\n-- Paused Scans Detected : #{pausedScans.count}  --\r\n"
     pausedScans.each do |scanHistory|
-        siteInfoID = scanHistory['Site ID'].to_i
+        siteInfoID = scanHistory.site_id.to_i
         siteDetail = Site.load(nsc, siteInfoID)
+        ## scanDetail = ScanSummary.select{ |scanInfo| (scanInfo['scan_id'].include? scanHistory.id.to_i)}
+        
         begin
-            puts "ScanID: #{scanHistory['Scan ID']}, Assets: #{scanHistory['Devices Discovered']}, ScanTemplate: #{siteDetail.scan_template_id}, SiteID: #{siteInfoID} - #{siteDetail.name}, #{scanHistory['Status']}"
+            
+            
+            puts "ScanID: #{scanHistory.id}, Assets: #{scanHistory.assets}, ScanTemplate: #{siteDetail.scan_template_id}, SiteID: #{siteInfoID} - #{siteDetail.name}, #{scanHistory.status}"
             rescue
             raise
         end
@@ -132,10 +138,14 @@ begin
     
     hostCount = 0 # Initialize hostCount.
     
+    ## pp ScanSummary
+    
     ## Output a list of active scans in the scan queue.
     activeScans.each do |status|
         siteInfoID = status.site_id
         siteDetail = Site.load(nsc, siteInfoID)
+        ## scanDetail = ScanSummary.select{ |scanInfo| (scanInfo['scan_id'].include? scanHistory['Scan ID'].to_i)}
+        
         begin
             Scan
             puts "ScanID: #{status.scan_id}, Assets: #{status.nodes.live}, ScanTemplate: #{siteDetail.scan_template_id}, SiteID: #{status.site_id} - #{siteDetail.name}, Status:#{status.status}, EngineID:#{status.engine_id}, StartTime:#{status.start_time}"
@@ -155,16 +165,16 @@ begin
         
         ## Loop through just enough paused scans to fill the open slots in the cleanup queue.
         pausedScans[0..fillQueue.to_i].each do |scanHistory|
-            siteInfoID = scanHistory['Site ID'].to_i
+            siteInfoID = scanHistory.site_id.to_i
             siteDetail = Site.load(nsc, siteInfoID)
             begin
-                hostCount += scanHistory['Devices Discovered'].to_i # Count the number of hosts being scanned.
-                puts "Resuming ScanID: #{scanHistory['Scan ID']}, Assets: #{scanHistory['Devices Discovered']}, ScanTemplate: #{siteDetail.scan_template_id}, SiteID: #{siteInfoID} - #{siteDetail.name}, Status: #{scanHistory['Status']}"
+                hostCount += scanHistory.assets.to_i # Count the number of hosts being scanned.
+                puts "Resuming ScanID: #{scanHistory.id}, Assets: #{scanHistory.assets}, ScanTemplate: #{siteDetail.scan_template_id}, SiteID: #{siteInfoID} - #{siteDetail.name}, Status: #{scanHistory.status}"
                 rescue
                 raise
             end
             ## Resume the provided scanid.
-            nsc.resume_scan(scanHistory['Scan ID'])
+            nsc.resume_scan(scanHistory.id)
             
         end
     end
