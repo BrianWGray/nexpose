@@ -114,7 +114,7 @@ begin
     
     ## Attempting some basic prioritization to complete lower asset count scans first.
     ## Perform a destructive sort of the pausedScans array based on the number of discovered assets.
-    pausedScans.sort! { |a,b| a['Devices Discovered'].to_i <=> b['Devices Discovered'].to_i }
+    pausedScans.sort! { |a,b| a.assets.to_i <=> b.assets.to_i }
     
     ## List all of the paused scans to stdout.
     puts "\r\n-- Paused Scans Detected : #{pausedScans.count}  --\r\n"
