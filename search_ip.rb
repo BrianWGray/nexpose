@@ -68,10 +68,6 @@ def assets (siteAddresses)
     return @assetList.flatten
 end
 
-#TODO: Add validation for whether a site exists prior to attempting to access it
-site = Nexpose::Site.load(nsc, siteId) # => Load Nexpose Site Data
-assetList = assets(site.included_addresses) # => detonate all site assets into an array
-
 
 # Accept arguments for the numerical site ID and an address to search for.
 if ARGV.length < 2
@@ -82,10 +78,13 @@ else
     siteId, findIp = ARGV[0], ARGV[1]
 end
 
+#TODO: Add validation for whether a site exists prior to attempting to access it
+site = Nexpose::Site.load(nsc, siteId) # => Load Nexpose Site Data
+assetList = assets(site.included_addresses) # => detonate all site assets into an array
+
 # provide a detonated ip list and search the array for a specified ip address value
 # if the address is within the array true is returned else false returned.
 if search_ip(assetList, findIp) == true; puts "true"; else puts "false"; end
-
 
 
 exit
