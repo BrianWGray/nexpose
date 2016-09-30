@@ -25,7 +25,7 @@ require 'net/smtp'
 include Nexpose
 
 # Default Values from yaml file
-config_path = File.expand_path("../conf/pgh-nvs-01.yaml", __FILE__)
+config_path = File.expand_path("../conf/nexpose.yaml", __FILE__)
 config = YAML.load_file(config_path)
 
 @host = config["hostname"]
