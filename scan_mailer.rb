@@ -88,7 +88,7 @@ Subject: #{@summary}
 
 <h1>Vulnerability Scan Notice</h1>
 <br/>
-<p><b>The listed email address #{mailTo} is registered as the primary notification list for this notice.</b></p?
+<p><b>The listed email address #{mailTo} is registered as the primary notification list for this notice.</b></p>
 <br/>
 <p>
 <b>#{@summary}</b>
