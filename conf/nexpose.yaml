@@ -33,4 +33,4 @@ mailFrom: "Notifier@example.com"
 mailServer: "relay@example.com"             
 mailPort: "25"
 mailDomain: "example.com"   
-
+defaultEmail: "security@example.com"
