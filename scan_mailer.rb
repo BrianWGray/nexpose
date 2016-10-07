@@ -25,7 +25,7 @@ require 'net/smtp'
 include Nexpose
 
 # Default Values from yaml file
-config_path = File.expand_path("../conf/nexpose.yaml", __FILE__)
+config_path = File.expand_path("../conf/pgh-nvs-01.yaml", __FILE__)
 config = YAML.load_file(config_path)
 
 @host = config["hostname"]
@@ -88,7 +88,7 @@ Subject: #{@summary}
 
 <h1>Vulnerability Scan Notice</h1>
 <br/>
-<p><b>The listed email address #{mailTo} is registered as the primary notification list for this notice.</b></p>
+<p><b>The listed email address #{mailTo} is registered as the primary notification list for this notice.</b></p?
 <br/>
 <p>
 <b>#{@summary}</b>
@@ -99,7 +99,7 @@ The scheduled scan is assigned the following template: #{@template}
 <p>
 #{@description}
 </p><p><br/>
-If believe you have recieved this notice in error please contact help@example.com.
+If you believe you have received this notice in error please contact help@example.com.
 </p>
 
 
