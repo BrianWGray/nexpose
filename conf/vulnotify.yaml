@@ -1,0 +1,30 @@
+############################################################
+#
+# Vulnerabilities to take action on and the action to take
+#
+############################################################
+
+---
+- vuln: "cmty-http-ricoh-no-password"
+  vulnId: "cmty-http-ricoh-no-password"
+  reporter_types: [email]
+
+- vuln: "apache-tomcat-default-password"
+  vulnId: "apache-tomcat-default-password"
+  reporter_types: [email]
+
+- vuln: "windows-hotfix-ms08-067"
+  vulnId: "windows-hotfix-ms08-067"
+  reporter_types: [email]
+ 
+- vuln: "http-openssl-cve-2014-0160"
+  vulnId: "http-openssl-cve-2014-0160"
+  reporter_types: [email]
+
+- vuln: "cmty-ssh-default-account-"
+  vulnId: "cmty-ssh-default-account-%"
+  reporter_types: [email]
+ 
+- vuln: "cmty-telnet-default-account-"
+  vulnId: "cmty-telnet-default-account-%"
+  reporter_types: [email]
