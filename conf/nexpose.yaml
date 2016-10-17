@@ -27,6 +27,9 @@ icsfilename: "NexposeScanSchedule.ics"
 icsitterations: 4
 staledays: 60
 
+# Vulnerability Reporter
+vulnReporterThreads: 1
+ageInterval: 24
 
 # Mail Notification Defaults
 mailFrom: "Notifier@example.com"
