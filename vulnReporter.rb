@@ -338,66 +338,67 @@ def report_vulns(vulnIds, queryTime, lastQueryTime, mailFrom, mailTo, mailDomain
       # If the result is 0 don't waste cycles querying for it.
       if assets[:asset_id] == 0
       else
-        @querySolution = query_solution(vulnIds[:nexpose_id], vulnIds[:vulnerability_id], assets[:asset_id], nsc, debug).first
-      end
-
-      # Temporary hack
-      if @querySolution.is_a?(Hash) then
-        if !@querySolution.empty? then
-
+          @querySolution = query_solution(vulnIds[:nexpose_id], vulnIds[:vulnerability_id], assets[:asset_id], nsc, debug).first
+        
+  
+        # Temporary hack
+        if @querySolution.is_a?(Hash) then
+          if !@querySolution.empty? then
+  
+          end
+        else
+          @querySolution = {}
         end
-      else
-        @querySolution = {}
+  
+        debug_print(@querySolution,debug)
+  
+        # Encode HTML entities in output.
+        coder = HTMLEntities.new
+  
+        # This is not terribly efficient but will improve over time.
+        assets[:proof] ? @proof = "#{coder.encode(assets[:proof])} " : @proof = "N/A"
+        assets[:mac_address] ? @macAddress = assets[:mac_address] : @macAddress  = "N/A"
+        @querySolution[:summary] ? @solSummary = @querySolution[:summary] : @solSummary = "N/A"
+        @querySolution[:url] ? @url = @querySolution[:url] : @url = "N/A"
+        @querySolution[:solution_type] ? @solutionType = "Solution Type: #{@querySolution[:solution_type]}" : @url = "N/A"
+        @querySolution[:fix] ? @fix = @querySolution[:fix] : @fix = "N/A"
+        @querySolution[:estimate] ? @estimate = "Estimated remediation time: #{@querySolution[:estimate]}" : @estimate ="N/A"
+  
+        ## attempt at cleaning code...
+        # @proof = "#{coder.encode(assets.fetch(:proof, "N/A"))} "
+        # @macAddress = assets.fetch(:mac_address, "N/A")
+        # @solSummary = @querySolution.fetch(:summary, "N/A")
+        # @url = @querySolution.fetch(:url, "N/A")
+        # @solutionType = "Solution Type: #{@querySolution.fetch(:solution_type, "N/A")}"
+        # @fix = @querySolution.fetch(:fix, "")
+        # @estimate = "Estimated remediation time: #{@querySolution.fetch(:estimate, "N/A")}"
+  
+        noticeContent = {
+        contact: mailTo,
+        subject: "Vulnerability Notification",
+        vulnTitle: "#{vulnIds[:title]}",
+        description: "#{vulnIds[:description]}",
+        ipAddress: "#{assets[:ip_address]}",
+        port: "#{assets[:port]}",
+        proto: "#{assets[:name]}",
+        macAddress: @macAddress,
+        hostName: "#{assets[:hostname]}",
+        otherNames: "#{assets[:names]}",
+        date: "#{assets[:date]}",
+        confirmation: "#{assets[:description]}",
+        proof: @proof,
+        solSummary: @solSummary,
+        url: @url,
+        solutionType: @solutionType,
+        fix: @fix,
+        estimate: @estimate
+        # Additional hash values may be added here to provide more information to the notification template.
+        }
+  
+        # Take Action:
+        # Send an email notification to the default contact for PoC
+        send_notification(mailFrom, mailTo, mailDomain, mailServer, noticeContent, debug)
       end
-
-      debug_print(@querySolution,debug)
-
-      # Encode HTML entities in output.
-      coder = HTMLEntities.new
-
-      # This is not terribly efficient but will improve over time.
-      assets[:proof] ? @proof = "#{coder.encode(assets[:proof])} " : @proof = "N/A"
-      assets[:mac_address] ? @macAddress = assets[:mac_address] : @macAddress  = "N/A"
-      @querySolution[:summary] ? @solSummary = @querySolution[:summary] : @solSummary = "N/A"
-      @querySolution[:url] ? @url = @querySolution[:url] : @url = "N/A"
-      @querySolution[:solution_type] ? @solutionType = "Solution Type: #{@querySolution[:solution_type]}" : @url = "N/A"
-      @querySolution[:fix] ? @fix = @querySolution[:fix] : @fix = "N/A"
-      @querySolution[:estimate] ? @estimate = "Estimated remediation time: #{@querySolution[:estimate]}" : @estimate ="N/A"
-
-      ## attempt at cleaning code...
-      # @proof = "#{coder.encode(assets.fetch(:proof, "N/A"))} "
-      # @macAddress = assets.fetch(:mac_address, "N/A")
-      # @solSummary = @querySolution.fetch(:summary, "N/A")
-      # @url = @querySolution.fetch(:url, "N/A")
-      # @solutionType = "Solution Type: #{@querySolution.fetch(:solution_type, "N/A")}"
-      # @fix = @querySolution.fetch(:fix, "")
-      # @estimate = "Estimated remediation time: #{@querySolution.fetch(:estimate, "N/A")}"
-
-      noticeContent = {
-      contact: mailTo,
-      subject: "Vulnerability Notification",
-      vulnTitle: "#{vulnIds[:title]}",
-      description: "#{vulnIds[:description]}",
-      ipAddress: "#{assets[:ip_address]}",
-      port: "#{assets[:port]}",
-      proto: "#{assets[:name]}",
-      macAddress: @macAddress,
-      hostName: "#{assets[:hostname]}",
-      otherNames: "#{assets[:names]}",
-      date: "#{assets[:date]}",
-      confirmation: "#{assets[:description]}",
-      proof: @proof,
-      solSummary: @solSummary,
-      url: @url,
-      solutionType: @solutionType,
-      fix: @fix,
-      estimate: @estimate
-      # Additional hash values may be added here to provide more information to the notification template.
-      }
-
-      # Take Action:
-      # Send an email notification to the default contact for PoC
-      send_notification(mailFrom, mailTo, mailDomain, mailServer, noticeContent, debug)
     end
   end 
 end 
