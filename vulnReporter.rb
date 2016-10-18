@@ -86,8 +86,10 @@ end
 
 # Display generic debug info to stdout
 def debug_print(returnedData, debug="false")
-  puts "\r\n[DEBUG]\r\n"
-  pp(returnedData) if debug == "true"
+  if debug == "true" then
+    puts "\r\n[DEBUG]\r\n"
+    pp(returnedData) 
+  end
 end
 
 # Take time in various formats and normalize it to a time object
@@ -161,16 +163,12 @@ def query_vulns(nexposeId, nsc, debug)
   @pullVulns.add_filter('version', '2.0.2')
   @pullVulns.add_filter('query', @query)
   
-  @pulledVulns = @pullVulns.generate(nsc,18000)
 
-  if @pulledVulns then
+  @pulledVulns = @pullVulns.generate(nsc,18000)
     # http://stackoverflow.com/questions/14199784/convert-csv-file-into-array-of-hashes
     # http://technicalpickles.com/posts/parsing-csv-with-ruby/
     # Convert the CSV report information provided by the API back into a hashed format. *Should submit an Idea to Rapid7 for JSON report output type from reports?
-    @returnedVulns = CSV.parse(@pulledVulns.chomp, { :headers => true, :header_converters => :symbol, :converters => [:all, :blank_to_nil] }).map(&:to_hash)
-  else
-    @returnedVulns = {}
-  end
+    @returnedVulns = CSV.parse(@pulledVulns, { :headers => true, :header_converters => :symbol, :converters => [:all, :blank_to_nil] }).map(&:to_hash) if @pulledVulns
 
   return @returnedVulns
 end
@@ -219,17 +217,10 @@ LEFT OUTER JOIN dim_scan dsc USING (scan_id)
     @pullVulns.add_filter('version', '2.0.2')
     @pullVulns.add_filter('query', @query)
     
-
-  @pulledVulns = @pullVulns.generate(nsc,18000)
-
-  if @pulledVulns then
     # http://stackoverflow.com/questions/14199784/convert-csv-file-into-array-of-hashes
     # http://technicalpickles.com/posts/parsing-csv-with-ruby/
     # Convert the CSV report information provided by the API back into a hashed format. *Should submit an Idea to Rapid7 for JSON report output type from reports?
-    @returnedVulns = CSV.parse(@pulledVulns.chomp, { :headers => true, :header_converters => :symbol, :converters => [:all, :blank_to_nil] }).map(&:to_hash)
-  else
- 
-  end
+    @returnedVulns = CSV.parse(@pullVulns.generate(nsc,18000).chomp, { :headers => true, :header_converters => :symbol, :converters => [:all, :blank_to_nil] }).map(&:to_hash)
 
   return @returnedVulns
   
@@ -249,7 +240,7 @@ def query_solution(nexposeId, vulnId, assetId, nsc, debug)
   JOIN dim_solution ds ON ds.solution_id = dshs.superceding_solution_id 
   "
 
-  @sqlWhere = "WHERE asset_id = #{assetId.to_i} AND vulnerability_id = #{vulnId.to_i} AND nexpose_id ILIKE '#{nexposeId}';"
+  @sqlWhere = "WHERE asset_id = #{assetId} AND vulnerability_id = #{vulnId};"
   @query = @sqlSelect + @sqlWhere
   debug_print(@query,debug)
 
@@ -258,8 +249,6 @@ def query_solution(nexposeId, vulnId, assetId, nsc, debug)
   @pullSolution.add_filter('version', '2.0.2')
   @pullSolution.add_filter('query', @query)
   
-  # @pulledSolutions = @pullSolution.generate(nsc,18000).chomp
-
   # http://stackoverflow.com/questions/14199784/convert-csv-file-into-array-of-hashes
   # http://technicalpickles.com/posts/parsing-csv-with-ruby/
   # Convert the CSV report information provided by the API back into a hashed format. *Should submit an Idea to Rapid7 for JSON report output type from reports?
@@ -295,7 +284,10 @@ The following issue was detected: #{noticeContent[:vulnTitle]}
 </p>
 <p>
 Time of Detection: #{noticeContent[:date]} <br/>
-Level of Confidence: #{noticeContent[:confirmation]}
+Level of Confidence: #{noticeContent[:confirmation]}<br/>
+<h3>Description of the issue:</h3>
+#{noticeContent[:description]}
+
 </p>
 <h3>Proof:</h3>
 #{noticeContent[:proof]}
@@ -329,76 +321,68 @@ end
 def report_vulns(vulnIds, queryTime, lastQueryTime, mailFrom, mailTo, mailDomain, mailServer, nsc, debug)
   
   @vulnAssets = vuln_assets(vulnIds[:vulnerability_id], queryTime, lastQueryTime, nsc, debug)
-  debug_print(@vulnAssets,debug)
+
   if !@vulnAssets.empty? then
     @vulnAssets.each do |assets|
 
-      debug_print(vulnIds,debug)
+      debug_print(assets[:asset_id],debug)
       
-      # If the result is 0 don't waste cycles querying for it.
-      if assets[:asset_id] == 0
-      else
-          @querySolution = query_solution(vulnIds[:nexpose_id], vulnIds[:vulnerability_id], assets[:asset_id], nsc, debug).first
-        
-  
-        # Temporary hack
-        if @querySolution.is_a?(Hash) then
-          if !@querySolution.empty? then
-  
-          end
-        else
+      @querySolution = query_solution(vulnIds[:nexpose_id], vulnIds[:vulnerability_id], assets[:asset_id], nsc, debug).first
+      
+
+      # Temporary hack
+      if !@querySolution.is_a?(Hash) then
           @querySolution = {}
-        end
-  
-        debug_print(@querySolution,debug)
-  
-        # Encode HTML entities in output.
-        coder = HTMLEntities.new
-  
-        # This is not terribly efficient but will improve over time.
-        assets[:proof] ? @proof = "#{coder.encode(assets[:proof])} " : @proof = "N/A"
-        assets[:mac_address] ? @macAddress = assets[:mac_address] : @macAddress  = "N/A"
-        @querySolution[:summary] ? @solSummary = @querySolution[:summary] : @solSummary = "N/A"
-        @querySolution[:url] ? @url = @querySolution[:url] : @url = "N/A"
-        @querySolution[:solution_type] ? @solutionType = "Solution Type: #{@querySolution[:solution_type]}" : @url = "N/A"
-        @querySolution[:fix] ? @fix = @querySolution[:fix] : @fix = "N/A"
-        @querySolution[:estimate] ? @estimate = "Estimated remediation time: #{@querySolution[:estimate]}" : @estimate ="N/A"
-  
-        ## attempt at cleaning code...
-        # @proof = "#{coder.encode(assets.fetch(:proof, "N/A"))} "
-        # @macAddress = assets.fetch(:mac_address, "N/A")
-        # @solSummary = @querySolution.fetch(:summary, "N/A")
-        # @url = @querySolution.fetch(:url, "N/A")
-        # @solutionType = "Solution Type: #{@querySolution.fetch(:solution_type, "N/A")}"
-        # @fix = @querySolution.fetch(:fix, "")
-        # @estimate = "Estimated remediation time: #{@querySolution.fetch(:estimate, "N/A")}"
-  
-        noticeContent = {
-        contact: mailTo,
-        subject: "Vulnerability Notification",
-        vulnTitle: "#{vulnIds[:title]}",
-        description: "#{vulnIds[:description]}",
-        ipAddress: "#{assets[:ip_address]}",
-        port: "#{assets[:port]}",
-        proto: "#{assets[:name]}",
-        macAddress: @macAddress,
-        hostName: "#{assets[:hostname]}",
-        otherNames: "#{assets[:names]}",
-        date: "#{assets[:date]}",
-        confirmation: "#{assets[:description]}",
-        proof: @proof,
-        solSummary: @solSummary,
-        url: @url,
-        solutionType: @solutionType,
-        fix: @fix,
-        estimate: @estimate
-        # Additional hash values may be added here to provide more information to the notification template.
-        }
-  
-        # Take Action:
-        # Send an email notification to the default contact for PoC
-        send_notification(mailFrom, mailTo, mailDomain, mailServer, noticeContent, debug)
       end
+
+      debug_print(@querySolution,debug)
+
+      # Encode HTML entities in output.
+      coder = HTMLEntities.new
+
+      # This is not terribly efficient but will improve over time.
+      assets[:proof] ? @proof = "#{coder.encode(assets[:proof])} " : @proof = "No proof provided"
+      assets[:mac_address] ? @macAddress = assets[:mac_address] : @macAddress  = "No machine address available"
+      @querySolution[:summary] ? @solSummary = @querySolution[:summary] : @solSummary = "No summary available"
+      @querySolution[:url] ? @url = @querySolution[:url] : @url = ""
+      @querySolution[:solution_type] ? @solutionType = "Solution Type: #{@querySolution[:solution_type]}" : @solutionType  = ""
+      @querySolution[:fix] ? @fix = @querySolution[:fix] : @fix = "Instructions for fixing the issue have not been provided."
+      @querySolution[:estimate] ? @estimate = "Estimated remediation time: #{@querySolution[:estimate]}" : @estimate ="No remediation time estemate available."
+
+      ## attempt at cleaning code...
+      # @proof = "#{coder.encode(assets.fetch(:proof, "N/A"))} "
+      # @macAddress = assets.fetch(:mac_address, "N/A")
+      # @solSummary = @querySolution.fetch(:summary, "N/A")
+      # @url = @querySolution.fetch(:url, "N/A")
+      # @solutionType = "Solution Type: #{@querySolution.fetch(:solution_type, "N/A")}"
+      # @fix = @querySolution.fetch(:fix, "")
+      # @estimate = "Estimated remediation time: #{@querySolution.fetch(:estimate, "N/A")}"
+
+      noticeContent = {
+      contact: mailTo,
+      subject: "Vulnerability Notification",
+      vulnTitle: "#{vulnIds[:title]}",
+      description: "#{vulnIds[:description]}",
+      ipAddress: "#{assets[:ip_address]}",
+      port: "#{assets[:port]}",
+      proto: "#{assets[:name]}",
+      macAddress: @macAddress,
+      hostName: "#{assets[:hostname]}",
+      otherNames: "#{assets[:names]}",
+      date: "#{assets[:date]}",
+      confirmation: "#{assets[:description]}",
+      proof: @proof,
+      solSummary: @solSummary,
+      url: @url,
+      solutionType: @solutionType,
+      fix: @fix,
+      estimate: @estimate
+      # Additional hash values may be added here to provide more information to the notification template.
+      }
+
+      # Take Action:
+      # Send an email notification to the default contact for PoC
+      send_notification(mailFrom, mailTo, mailDomain, mailServer, noticeContent, debug)
     end
   end 
 end 
@@ -424,12 +408,10 @@ begin
 
     # Collect information for which vulnerability ID's to evaluate
     @returnedVulns = query_vulns(vulnToCheck["vulnId"], nsc, debug).clone 
-    debug_print(@returnedVulns,debug) # Display a list of available tags on screen for dev 
-
     if !@returnedVulns.empty? then # Only process vulnerabilities if they exist.
       # Process each returned vulnerability ID
       @returnedVulns.each do |vulnIds|
-        debug_print(vulnIds,debug)
+        debug_print(vulnIds[:nexpose_id],debug)
         # http://stackoverflow.com/questions/1697504/threading-in-ruby-with-a-limit
         # until loop waits around until there are less than the specified number of created threads running before allowing execution of the main thread to continue
         if !vulnIds.empty? then
