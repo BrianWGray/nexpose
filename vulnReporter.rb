@@ -25,14 +25,14 @@ require 'csv' # enables csv parsing of reports to hashes
 require 'net/smtp' # used to support proof of concept email notices
 require 'pp' # lazy trouble shooting
 
-# debug sets verbose output to stdout.
-debug = "true"
-
 # Default Values from yaml file
 configPath = File.expand_path("../conf/nexpose.yaml", __FILE__)
 config = YAML.load_file(configPath)
 vulNotifyPath = File.expand_path("../conf/vulnotify.yaml", __FILE__)
 vulNotify = YAML.load_file(vulNotifyPath)
+
+# debug sets verbose output to stdout.
+debug = config["vrDebug"]
 
 host = config["hostname"]
 userid = config["username"]
@@ -137,7 +137,7 @@ end
 #####
 
 
-ageInterval = 336 # => Integer In Hours defines the number of hours to subtract from the query time to create a query time window.
+ageInterval = config["ageInterval"] # => Integer In Hours defines the number of hours to subtract from the query time to create a query time window.
 
 # specify initial query times for testing
 #queryTime = query_time("./tmp/lastRunFile", "2016-10-12 04:03 -400",debug)
@@ -228,7 +228,7 @@ LEFT OUTER JOIN dim_scan dsc USING (scan_id)
     # Convert the CSV report information provided by the API back into a hashed format. *Should submit an Idea to Rapid7 for JSON report output type from reports?
     @returnedVulns = CSV.parse(@pulledVulns.chomp, { :headers => true, :header_converters => :symbol, :converters => [:all, :blank_to_nil] }).map(&:to_hash)
   else
-    @returnedVulns = {}
+ 
   end
 
   return @returnedVulns
@@ -258,17 +258,13 @@ def query_solution(nexposeId, vulnId, assetId, nsc, debug)
   @pullSolution.add_filter('version', '2.0.2')
   @pullSolution.add_filter('query', @query)
   
-  @pulledSolutions = @pullSolution.generate(nsc,18000)
+  # @pulledSolutions = @pullSolution.generate(nsc,18000).chomp
 
-  if @pulledSolutions then
-    # http://stackoverflow.com/questions/14199784/convert-csv-file-into-array-of-hashes
-    # http://technicalpickles.com/posts/parsing-csv-with-ruby/
-    # Convert the CSV report information provided by the API back into a hashed format. *Should submit an Idea to Rapid7 for JSON report output type from reports?
-    @returnedSolution = CSV.parse(@pulledSolutions.chomp, { :headers => true, :header_converters => :symbol, :converters => [:all, :blank_to_nil] }).map(&:to_hash)
-  else
-    @returnedSolution = {}
-  end
-
+  # http://stackoverflow.com/questions/14199784/convert-csv-file-into-array-of-hashes
+  # http://technicalpickles.com/posts/parsing-csv-with-ruby/
+  # Convert the CSV report information provided by the API back into a hashed format. *Should submit an Idea to Rapid7 for JSON report output type from reports?
+  @returnedSolution = CSV.parse(@pullSolution.generate(nsc,18000).chomp, { :headers => true, :header_converters => :symbol, :converters => [:all, :blank_to_nil] }).map(&:to_hash)
+  
   return @returnedSolution
 
 end
@@ -336,19 +332,22 @@ def report_vulns(vulnIds, queryTime, lastQueryTime, mailFrom, mailTo, mailDomain
   debug_print(@vulnAssets,debug)
   if !@vulnAssets.empty? then
     @vulnAssets.each do |assets|
-      debug_print(assets,debug)
+
+      debug_print(vulnIds,debug)
       
-      @querySolution = query_solution(vulnIds[:nexpose_id], vulnIds[:vulnerability_id], assets[:asset_id], nsc, debug).first
+      # If the result is 0 don't waste cycles querying for it.
+      if assets[:asset_id] == 0
+      else
+        @querySolution = query_solution(vulnIds[:nexpose_id], vulnIds[:vulnerability_id], assets[:asset_id], nsc, debug).first
+      end
 
       # Temporary hack
-      if !@querySolution.is_a?(Hash) then
-        @querySolution = {
-          summary: "N/A",
-          url: "N/A",
-          solution_type: "N/A",
-          fix: "N/A",
-          estimate: "N/A"
-        }
+      if @querySolution.is_a?(Hash) then
+        if !@querySolution.empty? then
+
+        end
+      else
+        @querySolution = {}
       end
 
       debug_print(@querySolution,debug)
@@ -357,13 +356,13 @@ def report_vulns(vulnIds, queryTime, lastQueryTime, mailFrom, mailTo, mailDomain
       coder = HTMLEntities.new
 
       # This is not terribly efficient but will improve over time.
-      assets[:proof] ? @proof = "#{coder.encode(assets[:proof])} %>" : @proof = "N/A"
+      assets[:proof] ? @proof = "#{coder.encode(assets[:proof])} " : @proof = "N/A"
       assets[:mac_address] ? @macAddress = assets[:mac_address] : @macAddress  = "N/A"
-      querySolution[:summary] ? @solSummary = querySolution[:summary] : @solSummary = "N/A"
-      querySolution[:url] ? @url = querySolution[:url] : @url = "N/A"
-      querySolution[:solution_type] ? @solutionType = "Solution Type: #{querySolution[:solution_type]}" : @url = "N/A"
-      querySolution[:fix] ? @fix = querySolution[:fix] : @fix = "N/A"
-      querySolution[:estimate] ? @estimate = "Estimated remediation time: #{querySolution[:estimate]}" : @estimate ="N/A"
+      @querySolution[:summary] ? @solSummary = @querySolution[:summary] : @solSummary = "N/A"
+      @querySolution[:url] ? @url = @querySolution[:url] : @url = "N/A"
+      @querySolution[:solution_type] ? @solutionType = "Solution Type: #{@querySolution[:solution_type]}" : @url = "N/A"
+      @querySolution[:fix] ? @fix = @querySolution[:fix] : @fix = "N/A"
+      @querySolution[:estimate] ? @estimate = "Estimated remediation time: #{@querySolution[:estimate]}" : @estimate ="N/A"
 
       ## attempt at cleaning code...
       # @proof = "#{coder.encode(assets.fetch(:proof, "N/A"))} "
