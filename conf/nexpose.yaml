@@ -30,6 +30,7 @@ staledays: 60
 # Vulnerability Reporter
 vulnReporterThreads: 1
 ageInterval: 24
+vrDebug: "false"
 
 # Mail Notification Defaults
 mailFrom: "Notifier@example.com"
