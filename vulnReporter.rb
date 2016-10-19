@@ -154,7 +154,7 @@ def query_vulns(nexposeId, nsc, debug)
   @pullVulns.add_filter('query', @query)
   
   # Generate report to be parsed
-  @pulledVulns = @pullVulns.generate(nsc,18000).clone
+  @pulledVulns = @pullVulns.generate(nsc,18000)
   
   # http://stackoverflow.com/questions/14199784/convert-csv-file-into-array-of-hashes
   # http://technicalpickles.com/posts/parsing-csv-with-ruby/
@@ -177,7 +177,7 @@ asset_names AS (
                 GROUP BY asset_id
                 )
 
-SELECT 
+SELECT DISTINCT
 
 asset_id,
 ip_address,
@@ -188,13 +188,22 @@ host_name,
 an.names,
 favi.date,
 dvs.description,
-proofAsText(favi.proof) as proof
+proofAsText(favi.proof) as proof,
+summary,
+url,
+solution_type,
+fix,
+estimate
 
 FROM fact_asset_vulnerability_instance favi
 JOIN dim_asset da USING (asset_id)
 JOIN dim_service dsvc USING (service_id)
 JOIN dim_protocol dp USING (protocol_id)
 JOIN dim_vulnerability_status dvs USING (status_id)
+JOIN dim_vulnerability USING (vulnerability_id)
+JOIN dim_vulnerability_solution USING (vulnerability_id)
+JOIN dim_solution_highest_supercedence USING (solution_id)
+JOIN dim_solution ds ON superceding_solution_id = ds.solution_id
 LEFT OUTER JOIN asset_names an USING (asset_id)
 LEFT OUTER JOIN dim_scan dsc USING (scan_id)
 "
@@ -209,49 +218,15 @@ LEFT OUTER JOIN dim_scan dsc USING (scan_id)
     @pullVulns.add_filter('query', @query)
     
     # Generate report to be parsed
-    @pulledVulns = @pullVulns.generate(nsc,18000).clone
+    @pulledVulns = @pullVulns.generate(nsc,18000)
     
     # http://stackoverflow.com/questions/14199784/convert-csv-file-into-array-of-hashes
     # http://technicalpickles.com/posts/parsing-csv-with-ruby/
     # Convert the CSV report information provided by the API back into a hashed format. *Should submit an Idea to Rapid7 for JSON report output type from reports?
-    @returnedVulns = CSV.parse(@pulledVulns.chomp, { :headers => true, :header_converters => :symbol, :converters => [:all, :blank_to_nil] }).map(&:to_hash) if @pulledVulns
+    @returnedVulns = CSV.parse(@pulledVulns, { :headers => true, :header_converters => :symbol, :converters => [:all, :blank_to_nil] }).map(&:to_hash) if @pulledVulns
 
   return @returnedVulns
   
-end
-
-def query_solution(nexposeId, vulnId, assetId, nsc, debug)
-  @sqlSelect = "SELECT
-  summary,
-  url,
-  solution_type,
-  fix,
-  estimate
-
-  FROM dim_asset_vulnerability_solution
-  JOIN dim_solution_highest_supercedence dshs USING (solution_id)
-  JOIN dim_solution ds ON ds.solution_id = dshs.superceding_solution_id 
-  "
-
-  @sqlWhere = "WHERE asset_id = #{assetId} AND vulnerability_id = #{vulnId};"
-  @query = @sqlSelect + @sqlWhere
-  debug_print(@query,debug)
-
-  # Run a query to pull solution information related to a Vulnerability Id and a specific Vulnerable Asset.
-  @pullSolution = Nexpose::AdhocReportConfig.new(nil, 'sql')
-  @pullSolution.add_filter('version', '2.0.2')
-  @pullSolution.add_filter('query', @query)
-  
-  # Generate report to be parsed
-  @pulledSolution = @pullSolution.generate(nsc,18000).clone
-
-  # http://stackoverflow.com/questions/14199784/convert-csv-file-into-array-of-hashes
-  # http://technicalpickles.com/posts/parsing-csv-with-ruby/
-  # Convert the CSV report information provided by the API back into a hashed format. *Should submit an Idea to Rapid7 for JSON report output type from reports?
-  @returnedSolution = CSV.parse(@pulledSolution.chomp, { :headers => true, :header_converters => :symbol, :converters => [:all, :blank_to_nil] }).map(&:to_hash) if @pulledSolution
-  
-  return @returnedSolution
-
 end
 
 # For this proof of concept this is one example action that can be taken for an asset that is found to be vulnerable.
@@ -320,22 +295,16 @@ def report_vulns(vulnIds, queryTime, lastQueryTime, mailFrom, mailTo, mailDomain
     @vulnAssets.each do |assets|
       noticeContent = {} # Ensure noticeContent is cleared
       debug_print(assets[:asset_id],debug)
-       
-      @querySolution = query_solution(vulnIds[:nexpose_id], vulnIds[:vulnerability_id], assets[:asset_id], nsc, debug).first
-      
-      # Temporary hack
-      @querySolution = {} if !@querySolution.is_a?(Hash)
-      debug_print(@querySolution,debug)
 
       # This is not terribly efficient but will improve over time.
+      vulnIds[:description] ? @vulnDescription = "#{vulnIds[:description]}" : @vulnDescription = "A description of this vulnerability is not available for this notice."
       assets[:proof] ? @proof = "#{coder.encode(assets[:proof])} " : @proof = "No proof provided"
       assets[:mac_address] ? @macAddress = assets[:mac_address] : @macAddress  = "No machine address available"
-      vulnIds[:description] ? @vulnDescription = "#{vulnIds[:description]}" : @vulnDescription = "A description of this vulnerability is not available for this notice."
-      @querySolution[:summary] ? @solSummary = @querySolution[:summary] : @solSummary = "No summary available"
-      @querySolution[:url] ? @url = @querySolution[:url] : @url = ""
-      @querySolution[:solution_type] ? @solutionType = "Solution Type: #{@querySolution[:solution_type]}" : @solutionType  = ""
-      @querySolution[:fix] ? @fix = @querySolution[:fix] : @fix = "Instructions for fixing the issue have not been provided."
-      @querySolution[:estimate] ? @estimate = "Estimated remediation time: #{@querySolution[:estimate]}" : @estimate ="No remediation time estemate available."
+      assets[:summary] ? @solSummary = assets[:summary] : @solSummary = "No summary available"
+      assets[:url] ? @url = assets[:url] : @url = ""
+      assets[:solution_type] ? @solutionType = "Solution Type: #{assets[:solution_type]}" : @solutionType  = ""
+      assets[:fix] ? @fix = assets[:fix] : @fix = "Instructions for fixing the issue have not been provided."
+      assets[:estimate] ? @estimate = "Estimated remediation time: #{assets[:estimate]}" : @estimate ="No remediation time estemate available."
 
       noticeContent = {
       contact: mailTo,
