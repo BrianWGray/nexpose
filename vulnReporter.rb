@@ -289,48 +289,52 @@ end
 def report_vulns(vulnIds, queryTime, lastQueryTime, mailFrom, mailTo, mailDomain, mailServer, nsc, debug)
   # Encode HTML entities in output.
   coder = HTMLEntities.new
-  
   @vulnAssets = vuln_assets(vulnIds[:vulnerability_id], queryTime, lastQueryTime, nsc, debug)
-  if !@vulnAssets.empty? then
+
+  debug_print(@vulnAssets,debug)
+
+  if !@vulnAssets.empty? then # only process an asset list if assets are provided
     @vulnAssets.each do |assets|
-      noticeContent = {} # Ensure noticeContent is cleared
-      debug_print(assets[:asset_id],debug)
-
-      # This is not terribly efficient but will improve over time.
-      vulnIds[:description] ? @vulnDescription = "#{vulnIds[:description]}" : @vulnDescription = "A description of this vulnerability is not available for this notice."
-      assets[:proof] ? @proof = "#{coder.encode(assets[:proof])} " : @proof = "No proof provided"
-      assets[:mac_address] ? @macAddress = assets[:mac_address] : @macAddress  = "No machine address available"
-      assets[:summary] ? @solSummary = assets[:summary] : @solSummary = "No summary available"
-      assets[:url] ? @url = assets[:url] : @url = ""
-      assets[:solution_type] ? @solutionType = "Solution Type: #{assets[:solution_type]}" : @solutionType  = ""
-      assets[:fix] ? @fix = assets[:fix] : @fix = "Instructions for fixing the issue have not been provided."
-      assets[:estimate] ? @estimate = "Estimated remediation time: #{assets[:estimate]}" : @estimate ="No remediation time estemate available."
-
-      noticeContent = {
-      contact: mailTo,
-      subject: "Vulnerability Notification",
-      vulnTitle: "#{vulnIds[:title]}",
-      description: @vulnDescription,
-      ipAddress: "#{assets[:ip_address]}",
-      port: "#{assets[:port]}",
-      proto: "#{assets[:name]}",
-      macAddress: @macAddress,
-      hostName: "#{assets[:hostname]}",
-      otherNames: "#{assets[:names]}",
-      date: "#{assets[:date]}",
-      confirmation: "#{assets[:description]}",
-      proof: @proof,
-      solSummary: @solSummary,
-      url: @url,
-      solutionType: @solutionType,
-      fix: @fix,
-      estimate: @estimate
-      # Additional hash values may be added here to provide more information to the notification template.
-      }
-
-      # Take Action:
-      # Send an email notification to the default contact for PoC
-      send_notification(mailFrom, mailTo, mailDomain, mailServer, noticeContent, debug)
+      if assets[:asset_id] then # only process an asset that exists
+        noticeContent = {} # Ensure noticeContent is cleared
+        debug_print(assets[:asset_id],debug)
+  
+        # This is not terribly efficient but will improve over time.
+        vulnIds[:description] ? @vulnDescription = "#{vulnIds[:description]}" : @vulnDescription = "A description of this vulnerability is not available for this notice."
+        assets[:proof] ? @proof = "#{coder.encode(assets[:proof])} " : @proof = "No proof provided"
+        assets[:mac_address] ? @macAddress = assets[:mac_address] : @macAddress  = "No machine address available"
+        assets[:summary] ? @solSummary = assets[:summary] : @solSummary = "No summary available"
+        assets[:url] ? @url = assets[:url] : @url = ""
+        assets[:solution_type] ? @solutionType = "Solution Type: #{assets[:solution_type]}" : @solutionType  = ""
+        assets[:fix] ? @fix = assets[:fix] : @fix = "Instructions for fixing the issue have not been provided."
+        assets[:estimate] ? @estimate = "Estimated remediation time: #{assets[:estimate]}" : @estimate ="No remediation time estemate available."
+  
+        noticeContent = {
+        contact: mailTo,
+        subject: "Vulnerability Notification",
+        vulnTitle: "#{vulnIds[:title]}",
+        description: @vulnDescription,
+        ipAddress: "#{assets[:ip_address]}",
+        port: "#{assets[:port]}",
+        proto: "#{assets[:name]}",
+        macAddress: @macAddress,
+        hostName: "#{assets[:hostname]}",
+        otherNames: "#{assets[:names]}",
+        date: "#{assets[:date]}",
+        confirmation: "#{assets[:description]}",
+        proof: @proof,
+        solSummary: @solSummary,
+        url: @url,
+        solutionType: @solutionType,
+        fix: @fix,
+        estimate: @estimate
+        # Additional hash values may be added here to provide more information to the notification template.
+        }
+  
+        # Take Action:
+        # Send an email notification to the default contact for PoC
+        send_notification(mailFrom, mailTo, mailDomain, mailServer, noticeContent, debug)
+      end
     end
   end 
 end 
