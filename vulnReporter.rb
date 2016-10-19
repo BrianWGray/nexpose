@@ -2,13 +2,11 @@
 # Brian W. Gray 
 # Initial code generated: 10.11.2016
 
-
 # Purpose of this script.
 # Query for notifiable vulnerabilities and initiate configured actions.
 
 # This script queries all scans that occured in a specified time range from a console and then takes action
 # on systems that have been found to be vulnerable.
-
 
 # Dependencies required to be installed:
 # sudo gem install nexpose
@@ -26,7 +24,7 @@ require 'net/smtp' # used to support proof of concept email notices
 require 'pp' # lazy trouble shooting
 
 # Default Values from yaml file
-configPath = File.expand_path("../conf/nexpose.yaml", __FILE__)
+configPath = File.expand_path("../conf/pgh-nvs-01.yaml", __FILE__)
 config = YAML.load_file(configPath)
 vulNotifyPath = File.expand_path("../conf/vulnotify.yaml", __FILE__)
 vulNotify = YAML.load_file(vulNotifyPath)
@@ -39,6 +37,8 @@ userid = config["username"]
 password = config["passwordkey"]
 port = config["port"]
 @nexposeAjaxTimeout = config["nexposeajaxtimeout"]
+
+ageInterval = config["ageInterval"] # => Integer In Hours defines the number of hours to subtract from the specified query time to create a query time window.
 
 # If you need to add auth: https://www.tutorialspoint.com/ruby/ruby_sending_email.htm
 mailFrom = config["mailFrom"]
@@ -59,24 +59,24 @@ threadLimit = config["vulnReporterThreads"]
 module Nexpose
   class APIRequest
     include XMLUtils
-      # Execute an API request
-      def self.execute(url, req, api_version='1.2', options = {})
-        options = {timeout: @nexposeAjaxTimeout}
-        obj = self.new(req.to_s, url, api_version)
-        obj.execute(options)
-      return obj
+    # Execute an API request
+    def self.execute(url, req, api_version='1.2', options = {})
+      options = {timeout: @nexposeAjaxTimeout}
+      obj = self.new(req.to_s, url, api_version)
+      obj.execute(options)
+    return obj
     end
   end
 
-module AJAX
-      def self._https(nsc)
-        http = Net::HTTP.new(nsc.host, nsc.port)
-        http.use_ssl = true
-        # http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-        http.read_timeout = @nexposeAjaxTimeout
-        http
-      end
-end
+  module AJAX
+    def self._https(nsc)
+      http = Net::HTTP.new(nsc.host, nsc.port)
+      http.use_ssl = true
+      # http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+      http.read_timeout = @nexposeAjaxTimeout
+      http
+    end
+  end
 end
 
 # Support for changing blank csv fields to nil during csv parsing
@@ -132,22 +132,12 @@ def last_query_time(lastRunFile, ageInterval, time=nil, debug)
     return lastRunTime 
 end
 
-#####
-#
-# Set Query Time Values
-#
-#####
-
-
-ageInterval = config["ageInterval"] # => Integer In Hours defines the number of hours to subtract from the query time to create a query time window.
-
 # specify initial query times for testing
 #queryTime = query_time("./tmp/lastRunFile", "2016-10-12 04:03 -400",debug)
 #queryTime = query_time("./tmp/lastRunFile", "2016-09-26 22:51 -400",debug)
 
 queryTime = query_time("./tmp/lastRunFile",nil,debug)
 lastQueryTime = last_query_time("./tmp/lastRunFile", ageInterval, queryTime, debug)
-
 
 # Query a defined nexpose console for all vulnerabilities matching the listed vulnId value
 def query_vulns(nexposeId, nsc, debug)
@@ -163,12 +153,13 @@ def query_vulns(nexposeId, nsc, debug)
   @pullVulns.add_filter('version', '2.0.2')
   @pullVulns.add_filter('query', @query)
   
-
-  @pulledVulns = @pullVulns.generate(nsc,18000)
-    # http://stackoverflow.com/questions/14199784/convert-csv-file-into-array-of-hashes
-    # http://technicalpickles.com/posts/parsing-csv-with-ruby/
-    # Convert the CSV report information provided by the API back into a hashed format. *Should submit an Idea to Rapid7 for JSON report output type from reports?
-    @returnedVulns = CSV.parse(@pulledVulns, { :headers => true, :header_converters => :symbol, :converters => [:all, :blank_to_nil] }).map(&:to_hash) if @pulledVulns
+  # Generate report to be parsed
+  @pulledVulns = @pullVulns.generate(nsc,18000).clone
+  
+  # http://stackoverflow.com/questions/14199784/convert-csv-file-into-array-of-hashes
+  # http://technicalpickles.com/posts/parsing-csv-with-ruby/
+  # Convert the CSV report information provided by the API back into a hashed format. *Should submit an Idea to Rapid7 for JSON report output type from reports?
+  @returnedVulns = CSV.parse(@pulledVulns, { :headers => true, :header_converters => :symbol, :converters => [:all, :blank_to_nil] }).map(&:to_hash) if @pulledVulns
 
   return @returnedVulns
 end
@@ -217,17 +208,19 @@ LEFT OUTER JOIN dim_scan dsc USING (scan_id)
     @pullVulns.add_filter('version', '2.0.2')
     @pullVulns.add_filter('query', @query)
     
+    # Generate report to be parsed
+    @pulledVulns = @pullVulns.generate(nsc,18000).clone
+    
     # http://stackoverflow.com/questions/14199784/convert-csv-file-into-array-of-hashes
     # http://technicalpickles.com/posts/parsing-csv-with-ruby/
     # Convert the CSV report information provided by the API back into a hashed format. *Should submit an Idea to Rapid7 for JSON report output type from reports?
-    @returnedVulns = CSV.parse(@pullVulns.generate(nsc,18000).chomp, { :headers => true, :header_converters => :symbol, :converters => [:all, :blank_to_nil] }).map(&:to_hash)
+    @returnedVulns = CSV.parse(@pulledVulns.chomp, { :headers => true, :header_converters => :symbol, :converters => [:all, :blank_to_nil] }).map(&:to_hash) if @pulledVulns
 
   return @returnedVulns
   
 end
 
 def query_solution(nexposeId, vulnId, assetId, nsc, debug)
-
   @sqlSelect = "SELECT
   summary,
   url,
@@ -249,15 +242,17 @@ def query_solution(nexposeId, vulnId, assetId, nsc, debug)
   @pullSolution.add_filter('version', '2.0.2')
   @pullSolution.add_filter('query', @query)
   
+  # Generate report to be parsed
+  @pulledSolution = @pullSolution.generate(nsc,18000).clone
+
   # http://stackoverflow.com/questions/14199784/convert-csv-file-into-array-of-hashes
   # http://technicalpickles.com/posts/parsing-csv-with-ruby/
   # Convert the CSV report information provided by the API back into a hashed format. *Should submit an Idea to Rapid7 for JSON report output type from reports?
-  @returnedSolution = CSV.parse(@pullSolution.generate(nsc,18000).chomp, { :headers => true, :header_converters => :symbol, :converters => [:all, :blank_to_nil] }).map(&:to_hash)
+  @returnedSolution = CSV.parse(@pulledSolution.chomp, { :headers => true, :header_converters => :symbol, :converters => [:all, :blank_to_nil] }).map(&:to_hash) if @pulledSolution
   
   return @returnedSolution
 
 end
-
 
 # For this proof of concept this is one example action that can be taken for an asset that is found to be vulnerable.
 def send_notification(mailFrom, mailTo, mailDomain, mailServer, noticeContent, debug)
@@ -314,55 +309,39 @@ MESSAGE_END
         $stderr.puts("Fail: #{err}")
         exit(1)
     end
-
 end
 
-
 def report_vulns(vulnIds, queryTime, lastQueryTime, mailFrom, mailTo, mailDomain, mailServer, nsc, debug)
+  # Encode HTML entities in output.
+  coder = HTMLEntities.new
   
   @vulnAssets = vuln_assets(vulnIds[:vulnerability_id], queryTime, lastQueryTime, nsc, debug)
-
   if !@vulnAssets.empty? then
     @vulnAssets.each do |assets|
-
+      noticeContent = {} # Ensure noticeContent is cleared
       debug_print(assets[:asset_id],debug)
-      
+       
       @querySolution = query_solution(vulnIds[:nexpose_id], vulnIds[:vulnerability_id], assets[:asset_id], nsc, debug).first
       
-
       # Temporary hack
-      if !@querySolution.is_a?(Hash) then
-          @querySolution = {}
-      end
-
+      @querySolution = {} if !@querySolution.is_a?(Hash)
       debug_print(@querySolution,debug)
-
-      # Encode HTML entities in output.
-      coder = HTMLEntities.new
 
       # This is not terribly efficient but will improve over time.
       assets[:proof] ? @proof = "#{coder.encode(assets[:proof])} " : @proof = "No proof provided"
       assets[:mac_address] ? @macAddress = assets[:mac_address] : @macAddress  = "No machine address available"
+      vulnIds[:description] ? @vulnDescription = "#{vulnIds[:description]}" : @vulnDescription = "A description of this vulnerability is not available for this notice."
       @querySolution[:summary] ? @solSummary = @querySolution[:summary] : @solSummary = "No summary available"
       @querySolution[:url] ? @url = @querySolution[:url] : @url = ""
       @querySolution[:solution_type] ? @solutionType = "Solution Type: #{@querySolution[:solution_type]}" : @solutionType  = ""
       @querySolution[:fix] ? @fix = @querySolution[:fix] : @fix = "Instructions for fixing the issue have not been provided."
       @querySolution[:estimate] ? @estimate = "Estimated remediation time: #{@querySolution[:estimate]}" : @estimate ="No remediation time estemate available."
 
-      ## attempt at cleaning code...
-      # @proof = "#{coder.encode(assets.fetch(:proof, "N/A"))} "
-      # @macAddress = assets.fetch(:mac_address, "N/A")
-      # @solSummary = @querySolution.fetch(:summary, "N/A")
-      # @url = @querySolution.fetch(:url, "N/A")
-      # @solutionType = "Solution Type: #{@querySolution.fetch(:solution_type, "N/A")}"
-      # @fix = @querySolution.fetch(:fix, "")
-      # @estimate = "Estimated remediation time: #{@querySolution.fetch(:estimate, "N/A")}"
-
       noticeContent = {
       contact: mailTo,
       subject: "Vulnerability Notification",
       vulnTitle: "#{vulnIds[:title]}",
-      description: "#{vulnIds[:description]}",
+      description: @vulnDescription,
       ipAddress: "#{assets[:ip_address]}",
       port: "#{assets[:port]}",
       proto: "#{assets[:name]}",
@@ -387,9 +366,7 @@ def report_vulns(vulnIds, queryTime, lastQueryTime, mailFrom, mailTo, mailDomain
   end 
 end 
 
-
 begin
-
   nsc = Nexpose::Connection.new(host, userid, password, port)
   begin
       nsc.login
@@ -405,7 +382,6 @@ begin
 
   vulNotify.each do |vulnToCheck|
     debug_print(vulnToCheck,debug)
-
     # Collect information for which vulnerability ID's to evaluate
     @returnedVulns = query_vulns(vulnToCheck["vulnId"], nsc, debug).clone 
     if !@returnedVulns.empty? then # Only process vulnerabilities if they exist.
@@ -422,10 +398,8 @@ begin
         end
       end
     else
-      
     end 
   end
-
   # The main thread will block until every created thread returns a value.
   threadOut = actionThreads.map { |t| t.value }
   #actionThreads.each { |t| actionThreads.join }
