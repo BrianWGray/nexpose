@@ -50,7 +50,7 @@ puts 'logging into Nexpose'
 begin
     nsc.login
     rescue ::Nexpose::APIError => err
-    $stderr.puts("Connection failed: #{e.reason}")
+    $stderr.puts("Connection failed: #{err.reason}")
     exit(1)
 end
 
