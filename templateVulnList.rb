@@ -9,8 +9,9 @@ require 'pp'
 include Nexpose
 
 # Default Values
-
-config = YAML.load_file("conf/nexpose.yaml") # From file
+# Default Values from yaml file
+config_path = File.expand_path("../conf/nexpose.yaml", __FILE__)
+config = YAML.load_file(config_path)
 
 @host = config["hostname"]
 @userid = config["username"]
@@ -23,7 +24,7 @@ puts 'logging into Nexpose'
 begin
     nsc.login
     rescue ::Nexpose::APIError => err
-    $stderr.puts("Connection failed: #{e.reason}")
+    $stderr.puts("Connection failed: #{err.reason}")
     exit(1)
 end
 
