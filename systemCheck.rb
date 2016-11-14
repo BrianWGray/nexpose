@@ -4,17 +4,28 @@
 # 06.08.2015
 #
 # Purpose: Perform the health checks and perform corrective actions when able.
-#   1.)
-#   2.)
-#   3.)
-#   4.) 
+#   1.) Pull system info
+#   2.) Pull List of available Backups
+#   3.) Check Console Name
+#   4.) Check OS
+#   5.) Check Console Version
+#   6.) Check up time
+#   7.) Check console memory utilization
+#   8.) Check console CPU information
+#   9.) Check DB Version
+#   10.) Check Java Information
+#   11.) List available scan engines
+#   12.) List available scan pools
+#   13.) List scan pool member engines
+#   14.) Update status
+#   15.) Console performance monitor and limited issue resolution.
 #
 # Original idea and the start of much of the code sourced from https://github.com/dc401/NexposeRubyScripts/blob/master/prescan_healthcheck.rb
 
 require 'yaml'
 require 'rubygems'
 require 'nexpose'
-require 'Time'
+# require 'Time'
 require 'io/console'
 require 'pp'
 
@@ -243,6 +254,9 @@ puts #Blank line
 
 ## I don't use a rapid7 hosted scan engine so I've excluded it due to timeouts etc. attempting to refresh it.
 
+# Pull Engine version information to for reference below
+engineVer = nsc.engine_versions
+
 engine_ids = Array.new
 nsc.engines.each do |engine|
     unless engine.name.include?("Rapid7 Hosted Scan Engine")
@@ -250,7 +264,8 @@ nsc.engines.each do |engine|
     end
 end
 
-Nexpose::AJAX.post(nsc, "/ajax/engine-refreshAll.txml", "engineIds=#{engine_ids * ','}", Nexpose::AJAX::CONTENT_TYPE::FORM)
+# Disabled until I track down the new api request location
+# Nexpose::AJAX.post(nsc, "/ajax/engine-refreshAll.txml", "engineIds=#{engine_ids * ','}", Nexpose::AJAX::CONTENT_TYPE::FORM)
 
 engine_list = {}
 nsc.engines.each do |engine|
@@ -262,10 +277,30 @@ nsc.engines.each do |engine|
     puts "  Port: #{engine.port}"
     puts "  Status: #{engine.status}"
     puts #Blank line
-    
+
     # puts versionEngines
+    engineVer.each do |enVerInfo|
+        if enVerInfo["Name"].include?(engine.name)
+            puts "  DN: #{enVerInfo["DN"]}"
+            puts "  Version: #{enVerInfo["Version"]}"
+            puts "  Address (FQDN): #{enVerInfo["Address (FQDN)"]}"
+            puts "  Platform: #{enVerInfo["Platform"]}"
+            puts "  Serial No: #{enVerInfo["Serial No"]}"
+            puts "  Product Name: #{enVerInfo["Product Name"]}"
+            puts "  Last Content Update ID: #{enVerInfo["Last Content Update ID"]}"
+            puts "  Last Auto Content Update ID: #{enVerInfo["Last Auto Content Update ID"]}"
+            puts "  Last Product Update ID: #{enVerInfo["Last Product Update ID"]}"
+            puts "  Software Revision: #{enVerInfo["Software Revision"]}"
+            puts "  Product ID: #{enVerInfo["Product ID"]}"
+            puts "  Version ID: #{enVerInfo["Version ID"]}"
+            puts "  VM Version: #{enVerInfo["VM Version"]}"
+            puts
+        end    
+    end
 end
 
+
+engineVer = nsc.engine_versions
 
 puts #Blank line
 puts "---- List of Available Engine Pools ----"
@@ -304,7 +339,7 @@ begin
         nscUpdate = nsc.console_command("updatenow")
         puts nscUpdate
         puts "Pushing update to scan engines. Please wait."
-        engineUpdate = nsc.console_command("update engines")
+        engineUpdate = nsc.console_command("update engines") # throws error after api changes made to the application
     end
     
     rescue StandardError => err
