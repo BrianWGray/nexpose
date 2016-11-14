@@ -106,6 +106,7 @@ end
 nsc = Nexpose::Connection.new(@host, @userid, @password, @port)
 
 begin
+    checkService()
     nsc.login
     rescue ::Nexpose::APIError => err
     $stderr.puts("Connection failed: #{err.reason}")
