@@ -310,11 +310,27 @@ puts #Blank line
 
 
 nsc.engine_pools.each do |enginePool|
-        puts "Pool Name: #{enginePool.name}"
-        puts "  Pool ID: #{enginePool.id}"
-        puts "  Pool Scope: #{enginePool.scope}"
-        puts #Blank line
-        puts "      Engines <EnginePoolDetailsRequest place holder>"
+    puts "Pool Name: #{enginePool.name}"
+    puts "  Pool ID: #{enginePool.id}"
+    puts "  Pool Scope: #{enginePool.scope}"
+    puts #Blank line
+    puts "      --- Engines ---"
+    
+    if !enginePool.name.include?('Default Engine Pool')
+        poolConf = Nexpose::EnginePool::load(nsc, enginePool.name, 'silo') 
+
+        poolConf.engines.each do |poolEng|
+
+            puts "      Engine ID: #{poolEng.id}"
+            puts "      Engine Name: #{poolEng.name}"
+            puts "      Engine Address: #{poolEng.address}"
+            puts "      Engine Port: #{poolEng.port}"
+            puts "      Engine Scope: #{poolEng.scope}"
+            puts "      Engine Status: #{poolEng.status}"
+            puts
+
+        end
+    end
 end
 
 
