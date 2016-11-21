@@ -92,6 +92,54 @@ def debug_print(returnedData, debug="false")
   end
 end
 
+def checkService(config)
+    tryAgain = 0
+    
+    host = config["hostname"]
+    userid = config["username"]
+    password = config["passwordkey"]
+    port = config["port"]
+    @nexposeAjaxTimeout = config["nexposeajaxtimeout"]		
+    @serviceTimeout = config["servicetimeout"]
+    
+    begin
+        begin
+            path = '/login.html'  # Check to see if we may login or if we are re-directed to the maintenance login page.
+
+            http = Net::HTTP.new(host,port)
+            http.read_timeout = 1
+            http.use_ssl = true
+            http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+            response = nil   
+
+            http.start{|http|
+                request = Net::HTTP::Get.new(path)
+                response = http.request(request)
+            }
+
+            rescue Exception   # should really list all the possible http exceptions
+            puts "Attempt: #{tryAgain} Service Unavailable"
+            sleep (30)
+            retry if (tryAgain += 1) < @serviceTimeout
+        end
+
+        # response.code
+        if response.code == "200" # Check the status code anything other than 200 indicates the service is not ready.
+            puts "Attempt: #{tryAgain} #{response.code} The Nexpose Service appears to be up and functional"
+            tryAgain = @serviceTimeout
+            else
+            puts "Attempt: #{tryAgain} #{response.code} #{response.message} The Service is not yet fully initialized"
+            tryAgain += 1
+            sleep(30)
+        end
+    end while tryAgain < @serviceTimeout
+
+    if (response.code != "200")
+        puts "The service was never determined to be available. Action Timed Out"
+        exit
+    end
+end
+
 # Take time in various formats and normalize it to a time object
 def normalize_time(time, debug)
   begin
@@ -132,12 +180,6 @@ def last_query_time(lastRunFile, ageInterval, time=nil, debug)
     return lastRunTime 
 end
 
-# specify initial query times for testing
-#queryTime = query_time("./tmp/lastRunFile", "2016-10-12 04:03 -400",debug)
-#queryTime = query_time("./tmp/lastRunFile", "2016-09-26 22:51 -400",debug)
-
-queryTime = query_time("./tmp/lastRunFile",nil,debug)
-lastQueryTime = last_query_time("./tmp/lastRunFile", ageInterval, queryTime, debug)
 
 # Query a defined nexpose console for all vulnerabilities matching the listed vulnId value
 def query_vulns(nexposeId, nsc, debug)
@@ -155,7 +197,7 @@ def query_vulns(nexposeId, nsc, debug)
   
   # Generate report to be parsed
   @pulledVulns = @pullVulns.generate(nsc,18000)
-  
+
   # http://stackoverflow.com/questions/14199784/convert-csv-file-into-array-of-hashes
   # http://technicalpickles.com/posts/parsing-csv-with-ruby/
   # Convert the CSV report information provided by the API back into a hashed format. *Should submit an Idea to Rapid7 for JSON report output type from reports?
@@ -177,7 +219,7 @@ asset_names AS (
                 GROUP BY asset_id
                 )
 
-SELECT DISTINCT
+SELECT DISTINCT ON (asset_id,port)
 
 asset_id,
 ip_address,
@@ -189,11 +231,7 @@ an.names,
 favi.date,
 dvs.description,
 proofAsText(favi.proof) as proof,
-summary,
-url,
-solution_type,
-fix,
-estimate
+nexpose_id
 
 FROM fact_asset_vulnerability_instance favi
 JOIN dim_asset da USING (asset_id)
@@ -201,17 +239,13 @@ JOIN dim_service dsvc USING (service_id)
 JOIN dim_protocol dp USING (protocol_id)
 JOIN dim_vulnerability_status dvs USING (status_id)
 JOIN dim_vulnerability USING (vulnerability_id)
-JOIN dim_vulnerability_solution USING (vulnerability_id)
-JOIN dim_solution_highest_supercedence USING (solution_id)
-JOIN dim_solution ds ON superceding_solution_id = ds.solution_id
 LEFT OUTER JOIN asset_names an USING (asset_id)
 LEFT OUTER JOIN dim_scan dsc USING (scan_id)
 "
     # Provide the Vulnerability ID and time window for the query
     @sqlWhere = "WHERE (favi.vulnerability_id = '#{vulnId}') AND (favi.date BETWEEN ('#{lastQueryTime}'::timestamp) and ('#{queryTime}'::timestamp))"
-    @sqlOrderBy = " ORDER BY host_name, ip_address;"
+    @sqlOrderBy = " ORDER BY asset_id, port;"
     @query = @sqlSelect + @sqlWhere + @sqlOrderBy
-    debug_print(@query,debug)
 
     @pullVulns = Nexpose::AdhocReportConfig.new(nil, 'sql')
     @pullVulns.add_filter('version', '2.0.2')
@@ -224,53 +258,102 @@ LEFT OUTER JOIN dim_scan dsc USING (scan_id)
     # http://technicalpickles.com/posts/parsing-csv-with-ruby/
     # Convert the CSV report information provided by the API back into a hashed format. *Should submit an Idea to Rapid7 for JSON report output type from reports?
     @returnedVulns = CSV.parse(@pulledVulns, { :headers => true, :header_converters => :symbol, :converters => [:all, :blank_to_nil] }).map(&:to_hash) if @pulledVulns
-
+  
   return @returnedVulns
   
 end
+
+def vuln_solutions(vulnId, nexposeId, assetId, queryTime, nsc, debug)
+    
+    # Create a base query containing information about assets associated with the provided Vulnerability ID.
+    @sqlSelect = "
+SELECT DISTINCT
+
+ds.summary,
+ds.url,
+ds.solution_type,
+ds.fix,
+ds.estimate,
+ds.additional_data,
+ds.applies_to,
+ds.nexpose_id
+
+FROM fact_asset_vulnerability_instance favi
+JOIN dim_asset da USING (asset_id)
+JOIN dim_asset_vulnerability_solution davs USING (asset_id, vulnerability_id)
+JOIN dim_solution_highest_supercedence dshs USING (solution_id)
+JOIN dim_vulnerability dv USING (vulnerability_id)
+JOIN dim_solution ds ON ds.solution_id = dshs.superceding_solution_id  
+
+"
+    # Provide the Vulnerability ID and time window for the query
+    @sqlWhere = "WHERE (asset_id = #{assetId.to_i} AND vulnerability_id = #{vulnId.to_i})"
+    @sqlOrderBy = ";"
+    @query = @sqlSelect + @sqlWhere + @sqlOrderBy
+
+    @pullSols = Nexpose::AdhocReportConfig.new(nil, 'sql')
+    @pullSols.add_filter('version', '2.0.2')
+    @pullSols.add_filter('query', @query)
+    
+    # Generate report to be parsed
+    @pulledSols = @pullSols.generate(nsc,18000)
+    
+    # http://stackoverflow.com/questions/14199784/convert-csv-file-into-array-of-hashes
+    # http://technicalpickles.com/posts/parsing-csv-with-ruby/
+    # Convert the CSV report information provided by the API back into a hashed format. *Should submit an Idea to Rapid7 for JSON report output type from reports?
+    @returnedSols = CSV.parse(@pulledSols, { :headers => true, :header_converters => :symbol, :converters => [:all, :blank_to_nil] }).map(&:to_hash) if @pulledSols
+
+  return @returnedSols
+
+end
+
 
 # For this proof of concept this is one example action that can be taken for an asset that is found to be vulnerable.
 def send_notification(mailFrom, mailTo, mailDomain, mailServer, noticeContent, debug)
 
 # Example Email Notification Template. Modify as needed. Sending HTML email by default because I like it.
+# Example Email Notification Template. Modify as needed. Sending HTML email by default because I like it.
 message = <<MESSAGE_END
-From: #{mailFrom}
+From: #{mailFrom}  
 To: #{mailTo}
 MIME-Version: 1.0
 Content-type: text/html
-Subject: #{noticeContent[:subject]}
+Subject:#{noticeContent[:date]} - ISO IR Resolve - #{noticeContent[:vulnTitle]} (#{noticeContent[:ipAddress]})
 
-<h1>#{noticeContent[:subject]}</h1>
-<p>#{mailTo} is registered as the responsible party for this notice.<br/>
-</p>
+<h3>#{noticeContent[:date]} - ISO IR Resolve - #{noticeContent[:vulnTitle]} (#{noticeContent[:ipAddress]})</h3>
+Link to IDS or other system showing the vulnerability or compromise<br/>
+https://#{noticeContent[:console]}:#{noticeContent[:conPort]}/vulnerability/vuln-summary.jsp?vulnid=#{noticeContent[:vulnId]}&devid=#{noticeContent[:devId]}<br/>
+
 <p>
+<h3>Issue Summary:</h3>
 A recent scan of #{noticeContent[:ipAddress]} indicates a vulnerability on the system.<br/>
 The following issue was detected: #{noticeContent[:vulnTitle]}
+<h3>Description of the issue:</h3>
+#{noticeContent[:description]}
 </p>
-<p>#{noticeContent[:ipAddress]}:#{noticeContent[:port]} / #{noticeContent[:proto]}<br/>
-#{noticeContent[:hostName]}<br/>
-#{noticeContent[:otherNames]}<br/>
-#{noticeContent[:macAddress]}
+
+<p>
+<h3>Event Type:</h3>
+Vulnerable
+</p>
+<p>
+<h3>Host(s) Affected:</h3>
+#{noticeContent[:ipAddress]}:#{noticeContent[:port]} / #{noticeContent[:proto]}<br/>
+Hostname: #{noticeContent[:hostName]}<br/>
+ Detected Aliases: #{noticeContent[:otherNames]}<br/>
+Machine Address: #{noticeContent[:macAddress]}<br/>
+
 </p>
 <p>
 Time of Detection: #{noticeContent[:date]} <br/>
 Level of Confidence: #{noticeContent[:confirmation]}<br/>
-<h3>Description of the issue:</h3>
-#{noticeContent[:description]}
-
 </p>
-<h3>Proof:</h3>
+<h3>Evidence/Testing Results</h3>
 #{noticeContent[:proof]}
-<p>
-<h3>Solution Summary:</h3> 
-#{noticeContent[:solSummary]}<br/>
-#{noticeContent[:url]}
-</p>
-#{noticeContent[:solutionType]}<br/>
-#{noticeContent[:fix]}
-<p>
-If you have received this notice in error, please contact it-help@andrew.cmu.edu
-</p>
+#{noticeContent[:solText]}
+
+<br/>
+<i>#{noticeContent[:nexposeId]}</i>
 
 
 MESSAGE_END
@@ -286,9 +369,11 @@ MESSAGE_END
     end
 end
 
-def report_vulns(vulnIds, queryTime, lastQueryTime, mailFrom, mailTo, mailDomain, mailServer, nsc, debug)
+def report_vulns(vulnIds, queryTime, lastQueryTime, mailFrom, mailTo, config, nsc, debug)
   # Encode HTML entities in output.
   coder = HTMLEntities.new
+  @mailServer = config["mailServer"]
+  @mailDomain = config["mailDomain"]
   @vulnAssets = vuln_assets(vulnIds[:vulnerability_id], queryTime, lastQueryTime, nsc, debug)
 
   debug_print(@vulnAssets,debug)
@@ -300,54 +385,95 @@ def report_vulns(vulnIds, queryTime, lastQueryTime, mailFrom, mailTo, mailDomain
         debug_print(assets[:asset_id],debug)
   
         # This is not terribly efficient but will improve over time.
-        vulnIds[:description] ? @vulnDescription = "#{vulnIds[:description]}" : @vulnDescription = "A description of this vulnerability is not available for this notice."
-        assets[:proof] ? @proof = "#{coder.encode(assets[:proof])} " : @proof = "No proof provided"
-        assets[:mac_address] ? @macAddress = assets[:mac_address] : @macAddress  = "No machine address available"
-        assets[:summary] ? @solSummary = assets[:summary] : @solSummary = "No summary available"
-        assets[:url] ? @url = assets[:url] : @url = ""
-        assets[:solution_type] ? @solutionType = "Solution Type: #{assets[:solution_type]}" : @solutionType  = ""
-        assets[:fix] ? @fix = assets[:fix] : @fix = "Instructions for fixing the issue have not been provided."
-        assets[:estimate] ? @estimate = "Estimated remediation time: #{assets[:estimate]}" : @estimate ="No remediation time estemate available."
-  
+        vulnIds[:description] ? @vulnDescription = "#{vulnIds[:description]}" : @vulnDescription = "A description of this vulnerability is not available for this notice.<br/>"
+        assets[:proof] ? @proof = "#{coder.encode(assets[:proof])} " : @proof = "No proof provided<br/>"
+        assets[:mac_address] ? @macAddress = assets[:mac_address] : @macAddress  = "No machine address available<br/>"
+
+        @solutions = vuln_solutions(vulnIds[:vulnerability_id], assets[:nexpose_id], assets[:asset_id], assets[:date], nsc, debug)
+
+        @solText = "<h3>Solution Summary:</h3>"
+        @solutions.each do |sols|  
+          sols[:applies_to] ? @appliesTo = sols[:applies_to] : @appliesTo = "<br/>"      
+          sols[:solution_type] ? @solutionType = "Solution Type: #{sols[:solution_type]}" : @solutionType  = "<br/>"
+          sols[:estimate] ? @estimate = "Estimated remediation time: #{sols[:estimate]}" : @estimate ="No remediation time estimate is available.<br/>"
+          sols[:summary] ? @solSummary = sols[:summary] : @solSummary = "No summary available<br/>"
+          sols[:additional_data] ? @additionalData = sols[:additional_data] : @additionalData = "<br/>"
+          sols[:url] ? @url = sols[:url] : @url = "<br/>"
+          sols[:fix] ? @fix = sols[:fix] : @fix = "<br/>"
+
+          @solText << "
+
+<p>
+<h4>#{@solSummary}</h4>
+#{@solutionType} #{@appliesTo} #{@estimate}<br/>
+#{@url}<br/>
+#{@fix}<br/>
+#{@additionalData}
+</p>
+
+          "
+
+        end
+
         noticeContent = {
         contact: mailTo,
         subject: "Vulnerability Notification",
         vulnTitle: "#{vulnIds[:title]}",
+	      vulnId: "#{vulnIds[:vulnerability_id]}",
+	      devId: "#{assets[:asset_id]}", 
         description: @vulnDescription,
         ipAddress: "#{assets[:ip_address]}",
         port: "#{assets[:port]}",
         proto: "#{assets[:name]}",
         macAddress: @macAddress,
-        hostName: "#{assets[:hostname]}",
+        hostName: "#{assets[:host_name]}",
         otherNames: "#{assets[:names]}",
         date: "#{assets[:date]}",
         confirmation: "#{assets[:description]}",
         proof: @proof,
-        solSummary: @solSummary,
-        url: @url,
-        solutionType: @solutionType,
-        fix: @fix,
-        estimate: @estimate
+        console: config["hostname"],
+        conPort: config["port"],
+        nexposeId: assets[:nexpose_id],
+        solText: @solText
+
         # Additional hash values may be added here to provide more information to the notification template.
         }
   
         # Take Action:
+	# pp(noticeContent.inspect)
         # Send an email notification to the default contact for PoC
-        send_notification(mailFrom, mailTo, mailDomain, mailServer, noticeContent, debug)
-      end
+	send_notification(mailFrom, mailTo, @mailDomain, @mailServer, noticeContent, debug)        
+	end
     end
   end 
 end 
 
 begin
+until 1>2 #horrible keep alive loop... TODO: convert everything to run as part of the NetScan-NG platform
+# Reload Configuration in case any vulnerabilies are added or configurations changed
+config = YAML.load_file(configPath)
+vulNotify = YAML.load_file(vulNotifyPath)
+
+startTimer = Time.now # Start a timer for how long this process takes
+
+# specify initial query times for testing
+#queryTime = query_time("./tmp/lastRunFile", "2016-10-12 04:03 -400",debug)
+#queryTime = query_time("./tmp/lastRunFile", "2016-09-26 22:51 -400",debug)
+
+queryTime = query_time("./tmp/lastRunFile",nil,debug)
+lastQueryTime = last_query_time("./tmp/lastRunFile", ageInterval, queryTime, debug)
+
+begin
   nsc = Nexpose::Connection.new(host, userid, password, port)
   begin
+      checkService(config)	
       nsc.login
   rescue ::Nexpose::APIError => err
       $stderr.puts("Connection failed: #{err.reason}")
-      exit(1)
+      retry	  
   end
-  at_exit { nsc.logout }
+  
+at_exit {nsc.logout if nsc.session_id}
 
   # TODO: Complete threading implementation
   # Initialize query threads 
@@ -366,7 +492,7 @@ begin
         if !vulnIds.empty? then
           until actionThreads.map {|t| t.alive?}.count(true) < threadLimit do sleep 5 end
           actionThreads << Thread.new {
-            report_vulns(vulnIds, queryTime, lastQueryTime, mailFrom, mailTo, mailDomain, mailServer, nsc, debug) if vulnToCheck["reporter_types"].include? 'email'
+            report_vulns(vulnIds, queryTime, lastQueryTime, mailFrom, mailTo, config, nsc, debug) if vulnToCheck["reporter_types"].include? 'email'
           }
         end
       end
@@ -377,5 +503,19 @@ begin
   threadOut = actionThreads.map { |t| t.value }
   #actionThreads.each { |t| actionThreads.join }
 end
+  nsc.logout if nsc.session_id # We don't need to stay logged in while we wait for our next run to begin.
 
+  endTimer = Time.now  # Stop the timer for how long this process took
+  runTime = (endTimer - startTimer) # Determine total time taken to run
+  sleep(ageInterval.hours - runTime) # Sleep for 1 hour from the time the script is started and correct for runtime of the script.
+
+end
+rescue Exception => err
+	p err
+	retry
+else
+
+ensure 
+	nsc.logout if nsc.session_id # We don't need to stay logged in while we wait for our next run to begin. 
+end
 
