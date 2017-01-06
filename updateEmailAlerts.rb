@@ -16,9 +16,10 @@ require 'yaml'
 require 'nexpose'
 require 'optparse'
 
-# Default Values
 
-config = YAML.load_file("conf/nexpose.yaml") # From file
+# Default Values from yaml file
+config_path = File.expand_path("../conf/nexpose.yaml", __FILE__)
+config = YAML.load_file(config_path)
 
 @host = config["hostname"]
 @userid = config["username"]
@@ -79,8 +80,8 @@ begin
 
           # Confirm that the alert is type: SMTPAlert.
           # Create a new object from the SMTP alert to make changes
-          if alert.type.instance_of? Nexpose::SMTPAlert
-            smtpAlert = alert.type
+          if alert.alert_type.instance_of? Nexpose::SMTPAlert
+            smtpAlert = alert.alert_type
 
               # Only edit alerts where the old email address is present.
               if smtpAlert.recipients.include?(oldEmail)
@@ -95,7 +96,7 @@ begin
 
                 # Commit changes from the new alert object to the existing alert.
                 # Save the site configuration
-                alert.type = smtpAlert
+                alert.alert_type = smtpAlert
                 site.save(nsc)
                 puts "Saved changes to site #{site.name} (id:#{site.id})."
               else
