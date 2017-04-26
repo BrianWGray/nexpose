@@ -38,7 +38,6 @@ config = YAML.load_file(config_path)
 @userid = config["username"]
 @password = config["passwordkey"]
 @port = config["port"]
-@cleanupWaitTime = config["cleanupwaittime"]
 @nexposeAjaxTimeout = config["nexposeajaxtimeout"]
 
 nsc = Nexpose::Connection.new(@host, @userid, @password, @port)
@@ -93,8 +92,8 @@ def scan_status(nsc, config)
         ## Pull data for active scans
         activeScans = nsc.scan_activity()
     rescue Exception   # should really list all the possible http exceptions
-        puts "Connection issue detected - Retrying in #{@cleanupWaitTime} seconds)"
-        sleep (@cleanupWaitTime)
+        puts "Connection issue detected - Retrying in #{config["cleanupwaittime"]} seconds)"
+        sleep (config["cleanupwaittime"])
         begin # This is a less than ideal bandaid to make sure there is a valid session.
            nsc.login
         rescue ::Nexpose::APIError => err
@@ -182,10 +181,10 @@ begin
     hostCount = 0 # Initialize hostCount.
     hostCount += list_active_scans(nsc, config, scans)
     hostCount += resume_scans(nsc, config, scans)
-    puts "Total expected Active hosts being scanned: #{hostCount} - #{Time.now}\r\n\r\nNext Run time: #{Time.now + @cleanupWaitTime}\r\n\r\n"
+    puts "Total expected Active hosts being scanned: #{hostCount} - #{Time.now}\r\n\r\nNext Run time: #{Time.now + config["cleanupwaittime"]}\r\n\r\n"
     if ((scans[:pausedScans].count + scans[:activeScans].count) > 0)
         ## Wait between checks so that the scans have time to run.
-        sleep(@cleanupWaitTime)
+        sleep(config["cleanupwaittime"])
     end    
 ## If there are no more paused scans and the active scans have all completed without failing we can exit.
 end while ((scans[:pausedScans].count + scans[:activeScans].count) > 0)
