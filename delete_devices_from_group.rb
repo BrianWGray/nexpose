@@ -1,11 +1,11 @@
 #!/usr/bin/env ruby
+# BrianWGray
 # 03.19.2018
 
 # Script Purpose
 ## Purge assets listed within a specified group ID.
 
 ## written as an example for https://kb.help.rapid7.com/discuss/5aaabb3e311eea001e60e862
-
 
 require 'yaml'
 require 'nexpose'
@@ -24,8 +24,6 @@ config = YAML.load_file(config_path)
 @userid = config["username"]
 @password = config["passwordkey"]
 @port = config["port"]
-@staleDays = config["staledays"]
-@cleanupWaitTime = config["cleanupwaittime"]
 
 nsc = Nexpose::Connection.new(@host, @userid, @password, @port)
 
@@ -36,7 +34,7 @@ rescue ::Nexpose::APIError => err
     exit(1)
 end
 
-at_exit { nsc.logout}
+at_exit { nsc.logout if nsc.session_id }
 
 # load the specified asset group to purge and iterate through devices
 assetGroup = Nexpose::AssetGroup.load(nsc, groupID)
