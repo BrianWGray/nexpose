@@ -4,6 +4,8 @@
 # Script Purpose
 ## Purge assets listed within a specified group ID.
 
+## written as an example for https://kb.help.rapid7.com/discuss/5aaabb3e311eea001e60e862
+
 
 require 'yaml'
 require 'nexpose'
