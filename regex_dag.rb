@@ -36,7 +36,7 @@ end
 at_exit { nsc.logout }
 
 assetarray = []
-assetarray << Criterion.new(Search::Field::IP_ADDRESS,Search::Operator::LIKE,"^10\\\.\\\d{1,3}\\.\\\d{1,3}\\\.11$")
+assetarray << Criterion.new(Search::Field::IP_ADDRESS,Search::Operator::LIKE,"^10\\\.\\\d{1,3}\\\.\\\d{1,3}\\\.11$")
 
 
 crag = Criteria.new(assetarray,"OR")
