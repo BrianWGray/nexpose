@@ -1,3 +1,5 @@
+# Attempt to help with https://kb.help.rapid7.com/discuss/5c66e04394dea300577d6d47
+
 # Makes PS ignore self signed certs used by internal servers
 # Have someone actually sign this certificate... - BrianWGray
 if (-not ([System.Management.Automation.PSTypeName]'ServerCertificateValidationCallback').Type)
